@@ -1,0 +1,132 @@
+{
+  "case_id": "DEMO-CLAIM-001",
+  "product": "health_insurance",
+  "claim_type": "health_reimbursement",
+  "claim_status": "preparing_documents",
+  "claim_status_label_en": "Preparing documents",
+  "claim_status_label_hi": "दस्तावेज़ तैयार हो रहे हैं",
+  "claimant_label": "Demo claimant (fictional)",
+  "claimant_label_hi": "डेमो दावेदार (काल्पनिक)",
+  "policy_label": "Demo Health Policy",
+  "policy_label_hi": "डेमो स्वास्थ्य पॉलिसी",
+  "hospital_label": "Demo City Hospital (fictional)",
+  "hospital_label_hi": "डेमो सिटी अस्पताल (काल्पनिक)",
+  "checklist_source_id": "demo_checklist_01",
+  "fictional_notice": true,
+  "notice_en": "This is a fictional demo claim. It contains no real person, policy, hospital, medical or payment information.",
+  "notice_hi": "यह एक काल्पनिक डेमो दावा है। इसमें किसी वास्तविक व्यक्ति, पॉलिसी, अस्पताल, चिकित्सा या भुगतान की जानकारी नहीं है।",
+  "required_document_categories": [
+    {
+      "id": "claim_form",
+      "label_en": "Completed claim form",
+      "label_hi": "भरा हुआ दावा फ़ॉर्म",
+      "why_en": "The demo policy clause lists a completed claim form as a suggested reimbursement document.",
+      "why_hi": "डेमो पॉलिसी क्लॉज़ में भरा हुआ दावा फ़ॉर्म प्रतिपूर्ति के लिए सुझाए गए दस्तावेज़ के रूप में दिया गया है।",
+      "source_clause_id": "demo_policy_clause_01",
+      "source_page": 3,
+      "needs_confirmation": false
+    },
+    {
+      "id": "policy_schedule",
+      "label_en": "Policy schedule",
+      "label_hi": "पॉलिसी शेड्यूल",
+      "why_en": "The demo policy clause lists the policy schedule as a suggested reimbursement document.",
+      "why_hi": "डेमो पॉलिसी क्लॉज़ में पॉलिसी शेड्यूल प्रतिपूर्ति के लिए सुझाए गए दस्तावेज़ के रूप में दिया गया है।",
+      "source_clause_id": "demo_policy_clause_01",
+      "source_page": 3,
+      "needs_confirmation": false
+    },
+    {
+      "id": "discharge_summary",
+      "label_en": "Hospital discharge summary",
+      "label_hi": "अस्पताल की डिस्चार्ज समरी",
+      "why_en": "The demo policy clause lists the hospital discharge summary as a suggested reimbursement document.",
+      "why_hi": "डेमो पॉलिसी क्लॉज़ में अस्पताल की डिस्चार्ज समरी प्रतिपूर्ति के लिए सुझाए गए दस्तावेज़ के रूप में दी गई है।",
+      "source_clause_id": "demo_policy_clause_01",
+      "source_page": 3,
+      "needs_confirmation": false
+    },
+    {
+      "id": "itemised_bill",
+      "label_en": "Itemised final hospital bill",
+      "label_hi": "अस्पताल का आइटम-वार अंतिम बिल",
+      "why_en": "The demo policy clause lists the itemised final hospital bill as a suggested reimbursement document.",
+      "why_hi": "डेमो पॉलिसी क्लॉज़ में अस्पताल का आइटम-वार अंतिम बिल प्रतिपूर्ति के लिए सुझाए गए दस्तावेज़ के रूप में दिया गया है।",
+      "source_clause_id": "demo_policy_clause_01",
+      "source_page": 3,
+      "needs_confirmation": false
+    },
+    {
+      "id": "payment_receipt",
+      "label_en": "Payment receipts",
+      "label_hi": "भुगतान रसीदें",
+      "why_en": "The demo policy clause lists payment receipts as suggested reimbursement documents.",
+      "why_hi": "डेमो पॉलिसी क्लॉज़ में भुगतान रसीदें प्रतिपूर्ति के लिए सुझाए गए दस्तावेज़ों के रूप में दी गई हैं।",
+      "source_clause_id": "demo_policy_clause_01",
+      "source_page": 3,
+      "needs_confirmation": false
+    },
+    {
+      "id": "supporting_reports",
+      "label_en": "Prescriptions or investigation reports (where relevant)",
+      "label_hi": "प्रिस्क्रिप्शन या जाँच रिपोर्ट (जहाँ लागू हो)",
+      "why_en": "The demo policy clause says the insurer may ask for prescriptions or investigation reports where relevant. Confirm whether the insurer wants them for this claim.",
+      "why_hi": "डेमो पॉलिसी क्लॉज़ कहता है कि बीमाकर्ता जहाँ लागू हो प्रिस्क्रिप्शन या जाँच रिपोर्ट माँग सकता है। पुष्टि करें कि बीमाकर्ता इस दावे के लिए उन्हें चाहता है या नहीं।",
+      "source_clause_id": "demo_policy_clause_01",
+      "source_page": 3,
+      "needs_confirmation": true
+    },
+    {
+      "id": "cancelled_cheque",
+      "label_en": "Cancelled cheque or bank proof (only if the insurer specifically requires it)",
+      "label_hi": "रद्द चेक या बैंक प्रमाण (केवल तब जब बीमाकर्ता विशेष रूप से माँगे)",
+      "why_en": "The demo checklist includes this category only as a conditional item. The prototype does not say that a cancelled cheque is required for every insurer or every claim.",
+      "why_hi": "डेमो चेकलिस्ट इस श्रेणी को केवल सशर्त मद के रूप में शामिल करती है। प्रोटोटाइप यह नहीं कहता कि हर बीमाकर्ता या हर दावे के लिए रद्द चेक आवश्यक है।",
+      "source_clause_id": "demo_checklist_01",
+      "source_page": 1,
+      "needs_confirmation": true
+    }
+  ],
+  "timeline": [
+    {
+      "id": "step_confirm_list",
+      "stage_en": "Confirm the insurer's actual document list",
+      "stage_hi": "बीमाकर्ता की वास्तविक दस्तावेज़ सूची की पुष्टि करें",
+      "description_en": "Use the insurer's official channel and the wording for this specific policy. The demo checklist is illustrative.",
+      "description_hi": "बीमाकर्ता के आधिकारिक चैनल और इस विशेष पॉलिसी के पाठ का उपयोग करें। डेमो चेकलिस्ट केवल उदाहरण है।",
+      "status": "not_started"
+    },
+    {
+      "id": "step_submit",
+      "stage_en": "Submit through the insurer's official channel",
+      "stage_hi": "बीमाकर्ता के आधिकारिक चैनल से जमा करें",
+      "description_en": "The prototype cannot submit anything. Send the documents yourself using the channel the insurer confirms.",
+      "description_hi": "प्रोटोटाइप कुछ भी जमा नहीं कर सकता। बीमाकर्ता द्वारा पुष्टि किए गए चैनल से दस्तावेज़ स्वयं भेजें।",
+      "status": "not_started"
+    },
+    {
+      "id": "step_save_ack",
+      "stage_en": "Save the acknowledgement or reference number",
+      "stage_hi": "पावती या संदर्भ संख्या सहेजें",
+      "description_en": "Keep the written acknowledgement in a safe place you control. Do not share OTPs, PINs or passwords.",
+      "description_hi": "लिखित पावती को अपने नियंत्रण वाली सुरक्षित जगह रखें। OTP, पिन या पासवर्ड साझा न करें।",
+      "status": "not_started"
+    },
+    {
+      "id": "step_record_request",
+      "stage_en": "Record any additional-document request",
+      "stage_hi": "किसी अतिरिक्त दस्तावेज़ अनुरोध को दर्ज करें",
+      "description_en": "A request for more information is not a coverage or approval decision. Note what was asked and the date stated by the insurer.",
+      "description_hi": "अधिक जानकारी का अनुरोध कवरेज या स्वीकृति का निर्णय नहीं है। जो माँगा गया और बीमाकर्ता द्वारा बताई गई तारीख नोट करें।",
+      "status": "not_started"
+    },
+    {
+      "id": "step_follow_up",
+      "stage_en": "Follow up using the insurer's stated process",
+      "stage_hi": "बीमाकर्ता की बताई प्रक्रिया से फ़ॉलो-अप करें",
+      "description_en": "Use the insurer's official grievance route if needed. The prototype does not calculate deadlines or decide escalation eligibility.",
+      "description_hi": "आवश्यकता हो तो बीमाकर्ता के आधिकारिक शिकायत मार्ग का उपयोग करें। प्रोटोटाइप समय-सीमा नहीं निकालता और एस्केलेशन पात्रता तय नहीं करता।",
+      "status": "not_started"
+    }
+  ]
+}

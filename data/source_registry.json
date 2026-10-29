@@ -1,0 +1,114 @@
+{
+  "registry_note_en": "These are navigation links for you to open and verify. The prototype does not query, scrape or automate any portal. Link URLs are from the build specification; page content was not scraped or re-verified during the build.",
+  "registry_note_hi": "ये आपके लिए खोलकर सत्यापित करने के नेविगेशन लिंक हैं। प्रोटोटाइप किसी पोर्टल को क्वेरी, स्क्रैप या स्वचालित नहीं करता। लिंक यूआरएल बिल्ड विनिर्देश से हैं; निर्माण के दौरान पृष्ठ सामग्री को स्क्रैप या पुनः सत्यापित नहीं किया गया।",
+  "sources": [
+    {
+      "id": "irdai_health_dept",
+      "title": "IRDAI — Health Insurance Department",
+      "url": "https://irdai.gov.in/health-dept",
+      "purpose": "Official regulator page for health-insurance context. Open it to check current public guidance.",
+      "source_type": "regulator",
+      "checked_on": "2026-10-29",
+      "notes": "URL supplied in BUILD_PLAN.md. The app does not fetch or scrape this page. Re-check current wording before relying on it."
+    },
+    {
+      "id": "bima_bharosa_faq",
+      "title": "Bima Bharosa — FAQ and grievance route",
+      "url": "https://bimabharosa.irdai.gov.in/Home/FAQ",
+      "purpose": "Official grievance FAQ. Use it to understand the current complaint route and eligibility information.",
+      "source_type": "regulator_grievance",
+      "checked_on": "2026-10-29",
+      "notes": "The app does not submit a complaint. Bima Bharosa does not ask complainants to pay to resolve a grievance."
+    },
+    {
+      "id": "bima_bharosa_portal",
+      "title": "Bima Bharosa portal",
+      "url": "https://bimabharosa.irdai.gov.in/",
+      "purpose": "Official grievance portal link for the user to open and verify the current process.",
+      "source_type": "regulator_grievance",
+      "checked_on": "2026-10-29",
+      "notes": "Link only. The app does not implement automated filing, scraping or portal interaction."
+    },
+    {
+      "id": "irdai_gro_list",
+      "title": "IRDAI — List of insurer Grievance Redressal Officers",
+      "url": "https://irdai.gov.in/list-of-gros",
+      "purpose": "Find the insurer's official Grievance Redressal Officer contact route.",
+      "source_type": "regulator",
+      "checked_on": "2026-10-29",
+      "notes": "Link only. The app does not verify or store GRO contact details."
+    },
+    {
+      "id": "council_insurance_ombudsmen",
+      "title": "Council for Insurance Ombudsmen",
+      "url": "https://www.cioins.co.in/Ombudsman",
+      "purpose": "Official Ombudsman information. Check current eligibility and process yourself.",
+      "source_type": "ombudsman",
+      "checked_on": "2026-10-29",
+      "notes": "The prototype does not decide Ombudsman eligibility or calculate deadlines."
+    },
+    {
+      "id": "common_landing_portal",
+      "title": "Common Landing Portal for Unclaimed Financial Assets",
+      "url": "https://www.unclaimedassetsportal.in/",
+      "purpose": "Official starting point to look for unclaimed financial assets across participating institutions.",
+      "source_type": "government_portal",
+      "checked_on": "2026-10-29",
+      "notes": "The app has not searched this portal. A transaction clue is not proof of an unclaimed asset."
+    },
+    {
+      "id": "rbi_udgam",
+      "title": "RBI UDGAM — Unclaimed Deposits",
+      "url": "https://udgam.rbi.org.in/unclaimed-deposits/#/login",
+      "purpose": "Official RBI portal for searching unclaimed deposits with participating banks.",
+      "source_type": "regulator_portal",
+      "checked_on": "2026-10-29",
+      "notes": "The app has not searched this portal and does not claim it contains any record for the user."
+    },
+    {
+      "id": "iepfa",
+      "title": "Investor Education and Protection Fund Authority (IEPFA)",
+      "url": "https://iepf.gov.in/",
+      "purpose": "Official information about unclaimed dividends, shares and related investor protection routes.",
+      "source_type": "government_authority",
+      "checked_on": "2026-10-29",
+      "notes": "Link only. The app does not query IEPFA records or decide whether any amount is due."
+    },
+    {
+      "id": "sebi_investor_education",
+      "title": "SEBI Investor Website",
+      "url": "https://investor.sebi.gov.in/",
+      "purpose": "Official investor-education and grievance-navigation information for securities-market matters.",
+      "source_type": "regulator",
+      "checked_on": "2026-10-29",
+      "notes": "Link only. The app does not query SEBI systems or provide investment advice."
+    },
+    {
+      "id": "sarvam_openweight_docs",
+      "title": "Sarvam AI — Open-weight API documentation",
+      "url": "https://docs.sarvam.ai/api/getting-started/models/openweight",
+      "purpose": "Provider documentation for the optional Sarvam open-weight chat API.",
+      "source_type": "provider_documentation",
+      "checked_on": "2026-10-29",
+      "notes": "Optional provider. The app works fully without Sarvam and does not send user content to it. Model availability can change."
+    },
+    {
+      "id": "sarvam_model_status",
+      "title": "Sarvam AI — Model status",
+      "url": "https://docs.sarvam.ai/api/getting-started/models",
+      "purpose": "Provider model list and status page. Check current model IDs before enabling Sarvam.",
+      "source_type": "provider_documentation",
+      "checked_on": "2026-10-29",
+      "notes": "The app does not hardwire a model ID. The deprecated legacy sarvam-30b API model ID is not used."
+    },
+    {
+      "id": "dpdp_rules_backgrounder",
+      "title": "DPDP Rules — government backgrounder",
+      "url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2190655&lang=2&reg=48",
+      "purpose": "Public background material on the DPDP Rules notification. Not legal advice or a compliance certification.",
+      "source_type": "government_information",
+      "checked_on": "2026-10-29",
+      "notes": "The prototype is not certified as compliant with any law or regulation. Real deployment needs legal and privacy review."
+    }
+  ]
+}

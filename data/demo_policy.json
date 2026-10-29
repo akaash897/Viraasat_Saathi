@@ -1,0 +1,125 @@
+{
+  "policy_name": "Virasat Sample Health Policy — DEMO ONLY",
+  "insurer_label": "Demo Insurance Co. (fictional)",
+  "policy_label": "Demo Health Policy",
+  "currency": "INR",
+  "fictional_notice": true,
+  "notice_en": "Synthetic sample wording — not an actual insurance policy. It is not a real product, offer or contract.",
+  "notice_hi": "काल्पनिक नमूना पाठ — यह वास्तविक बीमा पॉलिसी नहीं है। यह कोई वास्तविक उत्पाद, प्रस्ताव या अनुबंध नहीं है।",
+  "clauses": [
+    {
+      "id": "demo_policy_clause_01",
+      "page": 3,
+      "heading": "Reimbursement claims — suggested documents",
+      "text": "Synthetic sample wording — not an actual policy. This fictional policy says a reimbursement request should include a completed claim form, the policy schedule, the hospital discharge summary, the itemised final hospital bill and payment receipts. The insurer may also ask for prescriptions or investigation reports where relevant. The insurer's current requirement may differ; verify it with the insurer."
+    },
+    {
+      "id": "demo_policy_clause_02",
+      "page": 4,
+      "heading": "Reimbursement process and acknowledgement",
+      "text": "Synthetic sample wording — not an actual policy. This fictional policy says a reimbursement request should be sent through the insurer's official claims channel. The insurer should acknowledge receipt in writing. Any time limit, additional-document request or decision timeline must be taken from the insurer's written communication for the specific claim. This demo does not state a universal deadline."
+    },
+    {
+      "id": "demo_policy_clause_03",
+      "page": 5,
+      "heading": "Waiting periods",
+      "text": "Synthetic sample wording — not an actual policy. This fictional policy says waiting periods, if any, are set out in the policy schedule for the specific product. This demo does not state that a particular treatment is inside or outside a waiting period. Check the policy schedule and ask the insurer."
+    },
+    {
+      "id": "demo_policy_clause_04",
+      "page": 6,
+      "heading": "Exclusions",
+      "text": "Synthetic sample wording — not an actual policy. This fictional policy lists sample exclusions such as cosmetic procedures and treatments excluded by the policy schedule. This is illustrative wording only. The prototype cannot decide whether any real treatment is excluded."
+    },
+    {
+      "id": "demo_policy_clause_05",
+      "page": 7,
+      "heading": "Grievance and escalation",
+      "text": "Synthetic sample wording — not an actual policy. This fictional policy says a grievance should first be raised with the insurer's Grievance Redressal Officer through the insurer's official channel, and a written acknowledgement should be retained. If the response is unsatisfactory or the matter remains unresolved, check the current Bima Bharosa and Ombudsman eligibility rules on the official sources. This demo does not encode eligibility or deadlines."
+    },
+    {
+      "id": "demo_policy_clause_06",
+      "page": 8,
+      "heading": "Claim intimation",
+      "text": "Synthetic sample wording — not an actual policy. This fictional policy says the insurer should be informed through its official channel as soon as practicable after discharge. The demo does not state a universal intimation deadline. Use the date and process stated by the insurer for this claim."
+    },
+    {
+      "id": "demo_policy_clause_07",
+      "page": 9,
+      "heading": "Additional documents",
+      "text": "Synthetic sample wording — not an actual policy. This fictional policy says the insurer may request additional documents or clarification. A request does not mean the claim is approved or rejected. Respond through the insurer's official channel and keep a copy of the acknowledgement."
+    },
+    {
+      "id": "demo_policy_clause_08",
+      "page": 10,
+      "heading": "Payment safety",
+      "text": "Synthetic sample wording — not an actual policy. This fictional policy says claim proceeds are paid through the insurer's official process. Never pay a fee to release a claim, never scan a QR code sent by a stranger, and never share an OTP, UPI PIN, password or card PIN."
+    }
+  ],
+  "facts": [
+    {
+      "id": "fact_documents",
+      "topic": "documents",
+      "statement_en": "The demo policy text says a reimbursement request should include a completed claim form, the policy schedule, the hospital discharge summary, the itemised final hospital bill and payment receipts. It may also ask for prescriptions or investigation reports where relevant.",
+      "statement_hi": "डेमो पॉलिसी का पाठ कहता है कि प्रतिपूर्ति अनुरोध में भरा हुआ दावा फ़ॉर्म, पॉलिसी शेड्यूल, अस्पताल की डिस्चार्ज समरी, अस्पताल का आइटम-वार अंतिम बिल और भुगतान रसीदें शामिल होनी चाहिए। जहाँ लागू हो, यह प्रिस्क्रिप्शन या जाँच रिपोर्ट भी माँग सकती है।",
+      "clause_id": "demo_policy_clause_01",
+      "page": 3
+    },
+    {
+      "id": "fact_process",
+      "topic": "reimbursement_process",
+      "statement_en": "The demo policy text says a reimbursement request should be sent through the insurer's official claims channel, and the insurer should acknowledge receipt in writing. Any time limit or decision timeline must come from the insurer's written communication for the specific claim.",
+      "statement_hi": "डेमो पॉलिसी का पाठ कहता है कि प्रतिपूर्ति अनुरोध बीमाकर्ता के आधिकारिक दावा चैनल से भेजा जाना चाहिए और बीमाकर्ता को लिखित में प्राप्ति की पुष्टि करनी चाहिए। कोई भी समय-सीमा या निर्णय की समयरेखा उस विशेष दावे के लिए बीमाकर्ता के लिखित संचार से ली जानी चाहिए।",
+      "clause_id": "demo_policy_clause_02",
+      "page": 4
+    },
+    {
+      "id": "fact_waiting",
+      "topic": "waiting_period",
+      "statement_en": "The demo policy text says waiting periods, if any, are set out in the policy schedule for the specific product. This demo does not state that a particular treatment is inside or outside a waiting period.",
+      "statement_hi": "डेमो पॉलिसी का पाठ कहता है कि प्रतीक्षा अवधि, यदि कोई हो, उस विशेष उत्पाद के पॉलिसी शेड्यूल में दी गई है। यह डेमो यह नहीं बताता कि कोई विशेष उपचार प्रतीक्षा अवधि के भीतर है या बाहर।",
+      "clause_id": "demo_policy_clause_03",
+      "page": 5
+    },
+    {
+      "id": "fact_exclusions",
+      "topic": "exclusions",
+      "statement_en": "The demo policy text lists sample exclusions such as cosmetic procedures and treatments excluded by the policy schedule. This is illustrative wording only; the prototype cannot decide whether any real treatment is excluded.",
+      "statement_hi": "डेमो पॉलिसी का पाठ नमूना अपवर्जन बताता है, जैसे कॉस्मेटिक प्रक्रियाएँ और पॉलिसी शेड्यूल द्वारा बाहर रखे गए उपचार। यह केवल उदाहरण है; प्रोटोटाइप यह तय नहीं कर सकता कि कोई वास्तविक उपचार बाहर रखा गया है या नहीं।",
+      "clause_id": "demo_policy_clause_04",
+      "page": 6
+    },
+    {
+      "id": "fact_grievance",
+      "topic": "grievance",
+      "statement_en": "The demo policy text says a grievance should first be raised with the insurer's Grievance Redressal Officer through the insurer's official channel, and a written acknowledgement should be retained. If the response is unsatisfactory, check the current Bima Bharosa and Ombudsman eligibility rules on the official sources.",
+      "statement_hi": "डेमो पॉलिसी का पाठ कहता है कि शिकायत पहले बीमाकर्ता के आधिकारिक चैनल से बीमाकर्ता के शिकायत निवारण अधिकारी के पास उठाई जानी चाहिए और लिखित पावती रखनी चाहिए। यदि उत्तर संतोषजनक न हो, तो आधिकारिक स्रोतों पर बीमा भरोसा और लोकपाल की वर्तमान पात्रता नियम जाँचें।",
+      "clause_id": "demo_policy_clause_05",
+      "page": 7
+    },
+    {
+      "id": "fact_intimation",
+      "topic": "claim_intimation",
+      "statement_en": "The demo policy text says the insurer should be informed through its official channel as soon as practicable after discharge. The demo does not state a universal intimation deadline.",
+      "statement_hi": "डेमो पॉलिसी का पाठ कहता है कि डिस्चार्ज के बाद यथाशीघ्र बीमाकर्ता को उसके आधिकारिक चैनल से सूचित किया जाना चाहिए। डेमो कोई सार्वभौमिक सूचना समय-सीमा नहीं बताता।",
+      "clause_id": "demo_policy_clause_06",
+      "page": 8
+    },
+    {
+      "id": "fact_additional",
+      "topic": "additional_documents",
+      "statement_en": "The demo policy text says the insurer may request additional documents or clarification. A request does not mean the claim is approved or rejected. Respond through the insurer's official channel and keep a copy of the acknowledgement.",
+      "statement_hi": "डेमो पॉलिसी का पाठ कहता है कि बीमाकर्ता अतिरिक्त दस्तावेज़ या स्पष्टीकरण माँग सकता है। अनुरोध का अर्थ यह नहीं है कि दावा स्वीकृत या अस्वीकृत हो गया है। बीमाकर्ता के आधिकारिक चैनल से उत्तर दें और पावती की प्रति रखें।",
+      "clause_id": "demo_policy_clause_07",
+      "page": 9
+    },
+    {
+      "id": "fact_payment_safety",
+      "topic": "payment_safety",
+      "statement_en": "The demo policy text says claim proceeds are paid through the insurer's official process. Never pay a fee to release a claim, never scan a QR code sent by a stranger, and never share an OTP, UPI PIN, password or card PIN.",
+      "statement_hi": "डेमो पॉलिसी का पाठ कहता है कि दावे की राशि बीमाकर्ता की आधिकारिक प्रक्रिया से भुगतान की जाती है। दावा छुड़ाने के लिए कभी शुल्क न दें, किसी अजनबी द्वारा भेजा गया QR कोड स्कैन न करें, और OTP, UPI पिन, पासवर्ड या कार्ड पिन कभी साझा न करें।",
+      "clause_id": "demo_policy_clause_08",
+      "page": 10
+    }
+  ]
+}

@@ -2,12 +2,13 @@
 
 **Financial guidance when you need it. Support when it matters most.**
 
-Virasat Saathi is an independent, local-first hackathon prototype with two financial-guidance journeys:
+Virasat Saathi is an independent, local-first hackathon prototype with three financial-guidance journeys:
 
 1. **Claims Companion** — helps a living policyholder understand a *fictional* sample health-insurance policy, prepare a reimbursement checklist, see which document categories are still unmarked, draft a follow-up, and track next steps.
 2. **Family Finance Finder** — reads a *synthetic* transaction statement, finds possible insurance / investment / loan / recurring-payment clues, shows the exact rows behind each lead, and routes the user to official channels for verification.
+3. **Active Insurances (Phase 2)** — a Paytm-style *demo* inventory of seeded policies, an external-policy upload path that uses **real Sarvam Document AI Extract** when configured, and an explicitly consented **simulated** nominee-link workflow with limited summary sharing.
 
-Both journeys share an evidence-first case panel, clear source labels and a session-only tracker. The product rule is:
+All journeys share an evidence-first case panel, clear source labels and session-only state. The product rule is:
 
 > **AI explains and assists. Deterministic rules check. Official sources establish requirements. The user decides.**
 
@@ -76,9 +77,18 @@ The app shows a persistent banner:
 - Session-only case note and next-step checklist.
 - Links to the Common Landing Portal, RBI UDGAM, Bima Bharosa, IEPFA and SEBI investor guidance **only when relevant**. The UI explicitly says: **“We have not searched this portal; open it to verify the lead.”**
 
+### Active Insurances (Phase 2, additive)
+
+- **Bought on Paytm (simulated).** Seeded fictional users (`paytm.demo.aarav`, `paytm.demo.meera`) and four clearly fictional policies across health, motor, life and travel. Switching the demo user filters the inventory. No Paytm API, SDK, credential, OTP, UPI PIN or real authentication exists anywhere in this path; the UI carries a persistent **“Independent hackathon prototype · Paytm-style demo · No live Paytm connection”** label.
+- **External Insurance (real Sarvam Document AI when configured).** PDF, PNG, JPG and JPEG only; 10 MB maximum; 20 PDF pages maximum; ZIP and TIFF rejected by extension and magic-byte checks. The exact upload disclosure is shown before the file picker. The consent checkbox is unchecked by default, and no Sarvam call happens until it is ticked and **Process document** is pressed. Files are held in memory for the request and are never written to disk.
+- **Sarvam Extract lifecycle.** The adapter submits `client.doc_ai.extract`, polls `get_status` to `completed` / `partially_completed` / `failed` / `rejected`, then reads `get_results`. A missing key, disabled flag, timeout, rejected document, unreadable response or SDK/network error produces a visible error and leaves the seeded policies available. It never fabricates OCR success.
+- **Review queue, not verification.** A successful extraction creates a session-only record with status `OCR_EXTRACTED_NEEDS_REVIEW`. Missing fields stay **Not found in document**. Incomplete or uncertain insurance results also go to Needs review. Clearly non-insurance documents (for example a bank statement, Aadhaar card or invoice) are not added. Only an explicit user review with an authorisation checkbox changes the status to `USER_REVIEWED_UNVERIFIED`; this still does **not** verify the policy with the insurer or prove it is active.
+- **Nominee-linked Policies (simulated).** The nominee must be chosen from the seeded mock directory and only after the owner ticks a confirmation checkbox. Summary sharing is a separate checkbox and is **off by default**. The nominee can accept or decline; the owner can revoke. Policy details are shown only after acceptance **and** explicit owner-authorised sharing, and then only as a limited summary (masked policy number; no full document, premium or full policy number). Every screen says **“Insurer nomination not verified”** and explains that this is not a legal nomination.
+- **Reset.** **Reset insurance demo** removes session-created external records and nominee changes, then restores the seeded demo policies and seeded accepted link. The global **Reset demo** also clears all Phase 2 state.
+
 ### Shared
 
-- English / Hindi UI toggle with reviewed static strings for key labels, instructions, status wording, fallbacks and all safety-critical disclaimers.
+- English / Hindi UI toggle with reviewed static strings for key labels, instructions, status wording, fallbacks and all safety-critical disclaimers. **Active Insurances is intentionally English-only in Phase 2**, while the Phase 1 journeys keep their existing Hindi/English behaviour.
 - Calm off-white / navy / teal / restrained saffron visual theme.
 - Persistent “Independent hackathon prototype · Demo data” label.
 - **Reset demo** clears all session data and returns to the synthetic case.
@@ -94,7 +104,7 @@ The app shows a persistent banner:
 - Python **3.11+** (tested here with Python **3.14.6** on Windows).
 - `pip`.
 - No database, cloud account or internet connection is required for the default demo.
-- Optional internet only if you deliberately enable Sarvam.
+- Optional internet only if you deliberately enable Sarvam. Sarvam Document AI (Phase 2) requires a real `SARVAM_API_KEY` and `SARVAM_ENABLED=true`; without them the upload control stays disabled and the seeded policies remain available.
 
 ### Windows PowerShell (exact commands)
 
@@ -148,26 +158,47 @@ Or without activation:
 The app works in deterministic mode by default. Copy `.env.example` to `.env` only if you want to configure Sarvam locally. **Never commit `.env`.**
 
 ```env
+# Shared
 SARVAM_API_KEY=
+SARVAM_ENABLED=true
+
+# Phase 2 — Sarvam Document AI Extract
+SARVAM_DOCUMENT_LANGUAGE=en-IN
+SARVAM_JOB_TIMEOUT_SECONDS=120
+SARVAM_POLL_INTERVAL_SECONDS=3
+
+# Phase 1 — optional fictional-content paraphrase
 SARVAM_MODEL=gemma4
 SARVAM_BASE_URL=https://api.sarvam.ai/v2
-SARVAM_ENABLED=false
 SARVAM_TIMEOUT_SECONDS=8
 SARVAM_MAX_OUTPUT_TOKENS=180
 ```
 
 | Variable | Meaning | Default |
 |---|---|---|
-| `SARVAM_API_KEY` | Optional provider key. Read from the environment only. Never logged. | empty |
-| `SARVAM_MODEL` | Configurable open-weight model ID. The adapter does not hardwire a model. | `gemma4` |
-| `SARVAM_BASE_URL` | OpenAI-compatible base URL for current `/v2/chat/completions`. | `https://api.sarvam.ai/v2` |
-| `SARVAM_ENABLED` | Explicit opt-in. `false` keeps the deterministic path. | `false` |
-| `SARVAM_TIMEOUT_SECONDS` | Conservative request timeout, clamped to 2–20 seconds. | `8` |
-| `SARVAM_MAX_OUTPUT_TOKENS` | Conservative output cap, clamped to 40–300. | `180` |
+| `SARVAM_API_KEY` | Optional provider key. Read from `.env`/the environment only. Never logged. Empty or placeholder values disable live calls. | empty |
+| `SARVAM_ENABLED` | Explicit opt-in for Sarvam. `false` keeps the deterministic/disabled path. | `false` in a local `.env`; the template suggests `true` after adding a key |
+| `SARVAM_DOCUMENT_LANGUAGE` | Document AI language: `en-IN`, `hi-IN` or `bn-IN`. Other values fall back to `en-IN`. | `en-IN` |
+| `SARVAM_JOB_TIMEOUT_SECONDS` | Overall Extract job timeout, clamped to 1–600 seconds. | `120` |
+| `SARVAM_POLL_INTERVAL_SECONDS` | Extract status poll interval, clamped to 0.1–30 seconds. | `3` |
+| `SARVAM_MODEL` | Phase 1 paraphrase model ID. The adapter does not hardwire a model. | `gemma4` |
+| `SARVAM_BASE_URL` | OpenAI-compatible base URL for Phase 1 `/v2/chat/completions`. | `https://api.sarvam.ai/v2` |
+| `SARVAM_TIMEOUT_SECONDS` | Phase 1 request timeout, clamped to 2–20 seconds. | `8` |
+| `SARVAM_MAX_OUTPUT_TOKENS` | Phase 1 output cap, clamped to 40–300. | `180` |
 
 ### To leave Sarvam disabled
 
-Do nothing. With no `.env`, or with `SARVAM_ENABLED=false`, the app uses reviewed static English/Hindi fallback explanations. No network call is made. The UI shows the deterministic explanation and a status label.
+Do nothing. With no `.env`, or with `SARVAM_ENABLED=false`, the app uses reviewed static English/Hindi fallback explanations and the Phase 2 upload control stays disabled. No network call is made. A placeholder key such as `replace_with_your_sarvam_api_key` is also treated as “not configured”.
+
+### To enable Phase 2 Document AI extraction
+
+1. Copy `.env.example` to `.env`.
+2. Put the real key in `SARVAM_API_KEY` (never commit `.env`).
+3. Set `SARVAM_ENABLED=true`.
+4. Leave `SARVAM_DOCUMENT_LANGUAGE=en-IN` unless the document is Hindi or Bengali.
+5. Restart Streamlit, open **Active Insurances → External Insurance**, tick the disclosure acknowledgement, choose a synthetic PDF/PNG/JPG/JPEG, and press **Process document**.
+
+A successful job creates an `OCR_EXTRACTED_NEEDS_REVIEW` record in session state. A failed or rejected job adds nothing and shows an error.
 
 ### To enable the optional fictional-content paraphrase
 
@@ -181,6 +212,8 @@ The adapter rejects the legacy `sarvam-30b` API model ID, validates the response
 
 ### Sarvam privacy boundary (important)
 
+**Phase 1 fictional-content paraphrase (chat-completions):**
+
 - The request can contain only:
   - `language` enum (`en` / `hi`),
   - `claim_type` enum (`health_reimbursement`),
@@ -188,10 +221,17 @@ The adapter rejects the legacy `sarvam-30b` API model ID, validates the response
   - `source_excerpt_id` enum (`demo_policy_clause_01` / `demo_checklist_01`),
   - the fixed synthetic excerpt supplied in `src/sarvam_service.py`.
 - The public adapter method accepts **no free-text, document, row, message or identifier parameter**. Tests inspect the signature and payload.
-- User-entered draft text, uploaded document text, transaction rows, extracted PDF text and case notes are **never** sent to Sarvam.
-- When a user-supplied file is present, the UI disables AI and says AI is disabled for user-supplied records.
-- Logs contain only a generic `status=success|fallback` and elapsed milliseconds. No prompt, response, key, file content or transaction row is logged.
+- User-entered draft text, uploaded document text, transaction rows, extracted PDF text and case notes are **never** sent to this paraphrase adapter.
+- When a user-supplied file is present, the Phase 1 AI control is disabled and says AI is disabled for user-supplied records.
 - The model may only paraphrase content the app already displays. It never creates a requirement, deadline, eligibility decision, legal conclusion or payout prediction. The original checklist remains visible.
+
+**Phase 2 Document AI Extract:**
+
+- The **selected document bytes are deliberately transmitted to Sarvam AI** only after the exact disclosure is shown, the acknowledgement checkbox is ticked and **Process document** is pressed. This is the one live external document path in the app.
+- Only the document, the fixed extraction JSON schema, the selected `en-IN` / `hi-IN` / `bn-IN` language and `output_format=json` are sent. No Paytm, bank, insurer or government API is contacted.
+- The upload is held in memory and is not written to disk, cached, logged or added to the repository. Extracted values are kept in Streamlit session state for review only.
+- Logs contain only a generic status, error type and elapsed milliseconds. No document bytes, extracted field values, policy numbers, names or API keys are logged.
+- OCR output is fallible and is never treated as insurer verification, proof of active cover or a claims decision.
 
 **Licensing note:** an open-weight model served by Sarvam is not the same as running the weights locally, and it does not make the whole application open source. The app code is MIT-licensed; model/API use remains subject to the provider’s terms and attribution requirements.
 
@@ -199,15 +239,15 @@ The adapter rejects the legacy `sarvam-30b` API model ID, validates the response
 
 ## 5. Data-flow and privacy model
 
-- **No persistence.** Claim data, checklist markings, tracker entries, drafts, case notes and uploads live only in Streamlit session state. There is no database, cloud storage or external analytics.
-- **No file writes for uploads.** CSV is parsed from bytes with pandas in memory; PDF/TXT is read from bytes with pypdf in memory. Original files are not saved. Extracted text is not persisted.
-- **No content logging.** The app does not log document content, transaction rows, health fields, bank details, API keys, raw prompts or raw responses.
+- **No persistence.** Claim data, checklist markings, tracker entries, drafts, case notes, seeded/external insurance records and nominee links live only in Streamlit session state. There is no database, cloud storage or external analytics.
+- **No file writes for uploads.** CSV is parsed from bytes with pandas in memory; PDF/TXT is read from bytes with pypdf in memory; Phase 2 policy files stay in memory for the Sarvam request. Original files are not saved. Extracted text is not persisted outside the session.
+- **No content logging.** The app does not log document content, transaction rows, health fields, bank details, policy numbers, names, API keys, raw prompts or raw responses.
 - **No analytics/trackers.** `.streamlit/config.toml` disables Streamlit usage statistics. There is no telemetry, tracking pixel or third-party analytics.
-- **Uploads.** PDF, TXT and CSV only; 10 MB per file; explicit acknowledgement before file selection; local processing only. Scanned PDFs get an “OCR is not supported” message.
-- **Reset demo.** Clears every app-owned `vs_` session key, including checklist, tracker, draft, Sarvam result, upload acknowledgement and family notes.
-- **No live integrations.** The app does not query, scrape, automate or submit anything to Paytm, banks, insurers, UPI mandates, Bima Bharosa, IRDAI, RBI, SEBI, IEPFA or any government portal. Official sources are rendered as links for the user to open.
-- **Sarvam.** Optional, synthetic-only, enum/source-ID-only. The default demo works with no key and no internet.
-- **Local only.** The upload path must not be deployed to a public URL that accepts real health/financial documents.
+- **Uploads.** Phase 1: PDF, TXT and CSV only; 10 MB per file; explicit acknowledgement before file selection; local processing only. Phase 2: PDF, PNG, JPG or JPEG only; 10 MB; 20 PDF pages; explicit disclosure and acknowledgement before the Sarvam call. ZIP and TIFF are rejected.
+- **Reset demo.** Clears every app-owned `vs_` session key, including checklist, tracker, draft, Sarvam results, upload acknowledgements, family notes, external policy records and nominee changes. **Reset insurance demo** restores the seeded Phase 2 fixtures.
+- **No live integrations.** The app does not query, scrape, automate or submit anything to Paytm, banks, insurers, UPI mandates, Bima Bharosa, IRDAI, RBI, SEBI, IEPFA or any government portal. Official sources are rendered as links for the user to open. Paytm is demo data only.
+- **Sarvam.** Optional. Phase 1 is synthetic-only and enum/source-ID-only. Phase 2 sends the selected document to Sarvam Document AI only after explicit acknowledgement; without a configured key, no document call is made. The default demo works with no key and no internet.
+- **Local only.** The upload paths must not be deployed to a public URL that accepts real health/financial documents.
 
 ---
 
@@ -224,6 +264,11 @@ The adapter rejects the legacy `sarvam-30b` API model ID, validates the response
 - The app does not ask a relative to authenticate as a deceased person, use that person’s OTP, or access that person’s account. Family/authority verification is out of scope. A death certificate alone is **not** represented as sufficient authority for every record or asset.
 - Anti-fraud warning is always available: never pay a fee to receive claim proceeds; never scan a QR code from a stranger; never share an OTP, UPI PIN, password or card PIN. IRDAI/Bima Bharosa does not ask complainants for payment to resolve a grievance.
 - IRDAI/Bima Bharosa/Ombudsman eligibility, documents and time limits can vary. The app links the official sources and does not invent a universal rule.
+- **Active Insurances** does not read real Paytm accounts, call Paytm, authenticate anyone, make a payment or create a real nomination. All Paytm-style identities, policies, directory matches and acknowledgements are **DEMO/SIMULATED**.
+- Seeded policies are labelled **Demo record — not verified with insurer**. OCR output is labelled **OCR extracted — needs review**; reviewed records are labelled **User reviewed — insurer status not verified**.
+- An external document is not added as a policy merely because OCR ran. Clearly non-insurance documents are rejected; uncertain or incomplete insurance results go to Needs review.
+- Nominee summary sharing is a separate opt-in and is **off by default**. Acceptance alone shows nothing unless the owner allowed sharing. The shared view is a limited summary only and explicitly says **“Insurer nomination not verified”**.
+- A death certificate, a demo nominee link or a family relationship is **not** treated as proof of legal authority, beneficial ownership or insurer nomination.
 
 ---
 
@@ -266,7 +311,10 @@ Viraasat_Saathi/
 │   ├── demo_policy.json         # fictional clause-cited policy
 │   ├── demo_claim.json          # fictional checklist + timeline
 │   ├── demo_transactions.csv    # synthetic statement
-│   └── source_registry.json     # official link registry
+│   ├── source_registry.json     # official link registry
+│   ├── mock_paytm_users.json    # seeded demo identities (Phase 2)
+│   ├── mock_paytm_policies.json # seeded fictional policies (Phase 2)
+│   └── mock_nominee_links.json  # seeded simulated nominee link
 ├── src/
 │   ├── __init__.py
 │   ├── models.py                # pydantic fixture/lead/source models
@@ -275,16 +323,25 @@ Viraasat_Saathi/
 │   ├── transaction_matcher.py   # explicit keywords + distinct-month rules
 │   ├── document_parser.py       # in-memory CSV/PDF/TXT validation
 │   ├── draft_templates.py       # deterministic bilingual drafts
-│   ├── sarvam_service.py        # optional enum-only Sarvam adapter
+│   ├── sarvam_service.py        # optional enum-only Phase 1 paraphrase adapter
 │   ├── safety.py                # reset, safety constants, redaction helpers
-│   └── translations.py          # reviewed English/Hindi static strings
+│   ├── translations.py          # reviewed English/Hindi static strings
+│   ├── mock_paytm_data.py       # validated seeded Phase 2 fixtures; no network
+│   ├── insurance_inventory.py   # common policy shape, sharing, reset
+│   ├── nominee_demo.py          # simulated owner-confirmed nominee links
+│   ├── upload_validation.py     # 10 MB, 20-page, MIME/magic checks
+│   ├── sarvam_document_ai.py    # real Sarvam Extract async adapter
+│   ├── policy_extraction_schema.py # fixed JSON extraction schema
+│   ├── policy_normalizer.py     # conservative OCR -> review record
+│   └── insurance_ui.py          # Active Insurances dashboard
 └── tests/
     ├── conftest.py
     ├── test_claims_engine.py
     ├── test_transaction_matcher.py
     ├── test_safety.py
     ├── test_sarvam_service.py
-    └── test_app_smoke.py
+    ├── test_app_smoke.py
+    └── test_phase2_insurance.py
 ```
 
 ---
@@ -317,7 +374,14 @@ The suite covers:
 - source registry uses HTTPS and contains the required official sources,
 - Sarvam adapter signature accepts only enums/source IDs, never free text,
 - Sarvam disabled mode, missing key, deprecated model, success, timeout fallback, malformed/adjudicative output fallback, and no payload logging,
-- Streamlit smoke tests for home, both journeys, checklist count, draft review gate, tracker, reset and language switching.
+- Phase 2 demo user switching and seeded policy filtering,
+- no Paytm network imports, URLs or fixtures containing phone/email identifiers,
+- Phase 2 upload type, magic-byte, 10 MB and 20-page limits; ZIP/TIFF rejection,
+- missing/placeholder key and disabled-mode behaviour with no client call,
+- Sarvam Extract lifecycle: submit, poll, results, object/dict responses, partial completion, timeout, failed/rejected and SDK errors,
+- conservative OCR normalisation, non-insurance rejection, missing values, masking and the review gate to `USER_REVIEWED_UNVERIFIED`,
+- nominee owner confirmation, separate summary sharing defaulting off, accept/decline/revoke and limited-summary visibility,
+- Streamlit smoke tests for home and all three journeys, checklist count, draft review gate, tracker, insurance sections/user switch, reset and language switching.
 
 ---
 
@@ -338,7 +402,7 @@ The suite covers:
 7. In **Track next steps**, enter a reminder date stated by the insurer (or leave blank) and tick **Mark done** for one step.
 8. Show the anti-fraud warning and official escalation links.
 
-### 1:35–2:25 — Family Finance Finder
+### 1:35–2:15 — Family Finance Finder
 
 1. Go back home and open **Family Finance Finder**.
 2. Click **Load synthetic statement**.
@@ -346,7 +410,14 @@ The suite covers:
 4. Open one lead and show the exact transaction rows, the keyword/rule explanation, pattern strength, “what this does not prove” and suggested next step.
 5. Open an official link card and read: **“We have not searched this portal; open it to verify the lead.”**
 
-### 2:25–3:00 — Trust and AI
+### 2:15–3:05 — Active Insurances (Phase 2)
+
+1. Go back home and open **Active Insurances**.
+2. Show the persistent **“Independent hackathon prototype · Paytm-style demo · No live Paytm connection”** strip and Aarav Demo’s three seeded policies. Switch to **Meera Demo** to show the inventory changes.
+3. Open **External Insurance**. Point out the exact disclosure, the unchecked acknowledgement and the disabled upload/process controls. If a real key is configured, upload a **synthetic** PDF/PNG/JPG/JPEG, tick the box, press **Process document**, then show the `OCR_EXTRACTED_NEEDS_REVIEW` record and its review form. If no key is configured, show **“Add SARVAM_API_KEY to .env to enable document extraction.”** and explain that no fake OCR is returned.
+4. Open **Nominee-linked Policies** as Meera Demo. Show the seeded accepted demo link and the limited summary (masked policy number, no premium or full number). Read **“Insurer nomination not verified.”** Then switch to Aarav Demo, open **Manage nominee** on the health policy (the seeded link is on the life policy), show that the owner confirmation is unticked and summary sharing is off by default, create a simulated link, switch back to Meera, and accept or decline it.
+
+### 3:05–3:25 — Trust and AI
 
 1. Show the **Sources & limitations** expander and the privacy banner.
 2. If Sarvam is configured, switch on the fictional-content AI toggle and request one checklist explanation. Otherwise show the deterministic English/Hindi fallback.
@@ -357,19 +428,21 @@ The suite covers:
 ## 11. Known limitations and out of scope
 
 - No live banking, insurer, UPI-mandate, government-portal or Account Aggregator integration.
-- No real Paytm transaction-history access and no claim that Paytm APIs are available.
+- No real Paytm transaction-history access, Paytm API/SDK, credentials or authentication; all Paytm-style data and nominee links are simulated.
 - No login, authentication, Aadhaar, OTP or account access.
 - No claim submission, settlement, money transfer, account closure, loan repayment or mandate cancellation.
 - No email/SMS/WhatsApp notification integration.
 - No universal claims checklist and no legal/regulatory deadline calculation.
 - No coverage, eligibility, approval, payout or likelihood prediction.
-- No OCR, handwriting extraction, medical interpretation or document authenticity verification.
+- No handwriting extraction, medical interpretation or document authenticity verification.
+- **Sarvam Document AI output is OCR, not insurer verification.** It can miss, misread or misclassify fields. Missing values remain **Not found in document**; users must review before relying on a record.
+- The external policy inventory is session-only; there is no insurer feed, policy verification, renewal check or active-cover confirmation.
+- Nominee linking is a **simulated Paytm-ID demo**, not an insurer nomination, legal heir determination or authority verification. A death certificate alone is not presented as sufficient authority for every record or asset.
 - No arbitrary real-policy Q&A; the policy answers come from the fictional fixture only.
-- No legal-heir determination or authority verification. A death certificate alone is not presented as sufficient authority for every record or asset.
 - No public cloud deployment that accepts real health/financial documents.
 - No voice/audio mode.
 - Official link page content is not scraped, re-verified or guaranteed current. Requirements can vary by insurer and product.
-- Sarvam is optional; its availability, model IDs and output quality can change. The app never depends on it for the main journey.
+- Sarvam is optional; its availability, model IDs, API shape and output quality can change. The app never depends on it for the main journey.
 - The app is a prototype, not a production security-reviewed service. Real deployment would require partner approval, security review, a privacy notice, contracts and legal/regulatory review.
 
 ---
@@ -385,8 +458,9 @@ The suite covers:
   - python-dotenv — BSD 3-Clause
   - pypdf — BSD 3-Clause
   - OpenAI Python SDK — Apache License 2.0
+  - sarvamai — provider SDK licence as published by Sarvam AI
   - pytest — MIT
-- **Optional Sarvam AI:** provider/API attribution and terms apply. The prototype uses an open-weight model served by Sarvam through an OpenAI-compatible API; it does **not** run the model weights locally and does **not** make the whole application open source. The adapter is configurable and defaults to `gemma4`; check the current Sarvam model-status documentation before enabling it.
+- **Optional Sarvam AI:** provider/API attribution and terms apply. Phase 1 uses an open-weight model served by Sarvam through an OpenAI-compatible API; it does **not** run the model weights locally and does **not** make the whole application open source. The adapter is configurable and defaults to `gemma4`; check the current Sarvam model-status documentation before enabling it. Phase 2 calls the Sarvam Document AI Extract API through the `sarvamai` SDK; its data-handling and retention terms apply to uploaded documents.
 - **No third-party logos or Paytm branding** are used. The abstract mark is a simple local SVG.
 - **No affiliation:** Paytm, any insurer, IRDAI, RBI, SEBI, IEPFA, the Council for Insurance Ombudsmen and Sarvam AI are not affiliated with this prototype.
 
@@ -398,9 +472,11 @@ The suite covers:
 - **PowerShell activation blocked:** use the direct `.\.venv\Scripts\python.exe` commands above.
 - **Port 8501 in use:** `streamlit run app.py --server.port 8502`.
 - **Sarvam toggle disabled:** this is expected without `SARVAM_ENABLED=true` and a key. The deterministic demo is fully functional.
-- **Sarvam request fails:** the app falls back automatically; the claim checklist and drafts are never blocked.
-- **PDF shows “OCR is not supported”:** the file is scanned/image-only. OCR is intentionally out of scope.
-- **Upload rejected:** only PDF/TXT in the claims readability check, CSV in Family Finder, and each file must be at most 10 MB.
+- **Phase 2 upload controls disabled:** add a real `SARVAM_API_KEY` to `.env`, set `SARVAM_ENABLED=true`, restart Streamlit, and tick the disclosure acknowledgement. A placeholder key is treated as not configured.
+- **Sarvam Phase 1 request fails:** the app falls back automatically; the claim checklist and drafts are never blocked.
+- **Sarvam Document AI request fails:** the app shows an error, adds no policy record, and keeps the seeded policies available. Check the key, network, file type, 10 MB/20-page limits and job status message.
+- **PDF shows “OCR is not supported”:** that is the Phase 1 claims readability check. Phase 2 uses Sarvam Document AI for permitted policy files.
+- **Upload rejected:** Phase 1 accepts PDF/TXT (claims) and CSV (Family Finder); Phase 2 accepts PDF/PNG/JPG/JPEG, maximum 10 MB and 20 PDF pages. ZIP and TIFF are rejected.
 
 ---
 
@@ -410,7 +486,7 @@ The suite covers:
 |---|---|
 | Fresh setup works | README exact commands; `requirements.txt`; tested on Python 3.14.6 |
 | App starts without Sarvam/internet | `SARVAM_ENABLED=false`; deterministic fallbacks; no required network |
-| Home shows both journeys + demo/privacy notice | `app.py` home cards + persistent banner |
+| Home shows all three journeys + demo/privacy notice | `app.py` home cards + persistent banner |
 | Claims loads fictional policy/claim with citations | `data/demo_policy.json`, `data/demo_claim.json`, `src/claims_engine.py` |
 | Checklist toggles change remaining count correctly | `checklist_progress` + Streamlit checkbox state |
 | Draft generated/copied/downloaded without submission | `src/draft_templates.py`; review gate; `.txt` download |
@@ -424,8 +500,19 @@ The suite covers:
 | Sarvam exceptions fall back gracefully | `_fallback`; timeout/malformed tests |
 | No content/API key/health/bank/prompt logs or disk writes | no content logging; in-memory parsers; no-disk-write test |
 | Uploads local/in-memory; no Sarvam; OCR message | `src/document_parser.py`; upload acknowledgement |
-| No live integrations or automatic submissions | no integration code; no submission buttons |
+| No live Paytm/bank/insurer/government integrations or automatic submissions | mock-only Paytm code; links only; no submission buttons |
+| Phase 2 Sarvam is the only live external call | `src/sarvam_document_ai.py`; disabled without key |
 | Fraud warning covers fee/QR/OTP/PIN/password | `anti_fraud_warning` in both languages |
+| Active Insurances dashboard has all three sections | `src/insurance_ui.py`; section radio keys |
+| Seeded Paytm users/policies are simulated and filter by user | `data/mock_paytm_*.json`; `src/mock_paytm_data.py`; `paytm_policies_for_user` |
+| No Paytm API/network/credentials; no real auth | source guard test; mock-only fixtures |
+| Upload limits and consent gate | `src/upload_validation.py`; unchecked acknowledgement; explicit Process button |
+| Real Sarvam Extract lifecycle with no fake success | `src/sarvam_document_ai.py`; mocked lifecycle tests; disabled/error paths |
+| OCR creates Needs review; missing fields stay missing | `src/policy_normalizer.py`; `OCR_EXTRACTED_NEEDS_REVIEW`; review form |
+| Non-insurance docs rejected; uncertain docs go to review | `classify_document`; `build_external_policy` |
+| Owner confirmation + separate summary sharing off by default | `src/nominee_demo.py`; nominee checkboxes |
+| Accept/decline/revoke and limited nominee view | `respond_to_nominee_link`; `revoke_nominee_link`; `limited_shared_summary` |
+| Reset restores Phase 2 fixtures | `reset_insurance_session`; global `reset_session_state` |
 
 ---
 

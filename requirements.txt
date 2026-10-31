@@ -4,4 +4,5 @@ pydantic>=2.8
 python-dotenv>=1.0
 pypdf>=5.0
 openai>=1.50
+sarvamai>=0.1.41
 pytest>=8.0

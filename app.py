@@ -43,6 +43,7 @@ from src.fixtures import (  # noqa: E402
     load_policy,
     load_source_registry,
 )
+from src.insurance_ui import render_active_insurances  # noqa: E402
 from src.models import DemoClaim, Language  # noqa: E402
 from src.safety import (  # noqa: E402
     format_inr,
@@ -80,6 +81,11 @@ DEFAULT_SESSION = {
     "vs_family_loaded": False,
     "vs_family_mode": "demo",
     "vs_sarvam_opt_in": False,
+    "vs_insurance_active_user_id": "paytm.demo.aarav",
+    "vs_insurance_section": "bought",
+    "vs_insurance_upload_nonce": 0,
+    "vs_insurance_nominee_policy_id": None,
+    "vs_insurance_review_policy_id": None,
 }
 
 CLAIM_SCRATCH_PREFIXES = (
@@ -273,9 +279,52 @@ def render_css() -> None:
         [data-testid="stMetricValue"] { color: var(--vs-navy); font-weight: 800; }
         [data-testid="stMetricLabel"] { color: var(--vs-muted); }
         hr { border-color: var(--vs-border); }
+        .vs-paytm-strip {
+            background: linear-gradient(90deg, #E8F1FF 0%, #F4F8FF 55%, #EAF6F3 100%);
+            border: 1px solid #BBD4F7; color: #0B3B8C;
+            border-radius: 14px; padding: 10px 14px;
+            font-size: .86rem; font-weight: 700; line-height: 1.45;
+            margin: 12px 0 16px;
+        }
+        .vs-session-card {
+            display: flex; align-items: center; gap: 14px;
+            background: #F3F8FF; border: 1px solid #C9DDF7;
+            border-radius: 18px; padding: 14px 16px; margin: 8px 0 4px;
+        }
+        .vs-session-avatar {
+            width: 46px; height: 46px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: #0B3B8C; color: #fff; font-weight: 800;
+            letter-spacing: .02em;
+        }
+        .vs-session-name { color: #0B3B8C; font-weight: 800; font-size: 1.02rem; }
+        .vs-insurer-name {
+            color: #0B3B8C; font-weight: 800; font-size: 1.1rem;
+            letter-spacing: -0.01em; margin-bottom: 4px;
+        }
+        .vs-fact-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+            gap: 10px 16px; background: #F8FBFF; border: 1px solid #E1ECFA;
+            border-radius: 14px; padding: 12px 14px; margin: 10px 0;
+        }
+        .vs-fact-grid div { min-width: 0; }
+        .vs-fact-label {
+            display: block; color: #5B6B7A; font-size: .72rem;
+            text-transform: uppercase; letter-spacing: .06em; font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .vs-fact-grid strong {
+            display: block; color: #1B2A38; font-size: .92rem;
+            font-weight: 700; overflow-wrap: anywhere;
+        }
+        .vs-pill-paytm { background: #E6F0FF; color: #0B3B8C; }
+        .vs-pill-review { background: #FFF1D6; color: #7A5200; }
+        .vs-pill-shared { background: #E6F7EE; color: #0B6B3A; }
         @media (max-width: 760px) {
             .block-container { padding-left: 1rem; padding-right: 1rem; }
             .vs-title { font-size: 1.3rem; }
+            .vs-fact-grid { grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+            .vs-session-card { align-items: flex-start; }
         }
         </style>
         """,
@@ -333,6 +382,28 @@ def render_privacy_banner(language: Language) -> None:
     )
 
 
+def render_top_nav(language: Language) -> None:
+    """Compact navigation shared by the Phase 1 and Phase 2 journeys."""
+    current = str(st.session_state.get("vs_page", "home"))
+    items = [
+        ("home", "Home", "vs_nav_home"),
+        ("claims", "Claims Companion", "vs_nav_claims"),
+        ("family", "Family Finance Finder", "vs_nav_family"),
+        ("insurance", "Active Insurances", "vs_nav_insurance"),
+    ]
+    columns = st.columns(len(items))
+    for column, (target, label, key) in zip(columns, items):
+        with column:
+            if st.button(
+                label,
+                key=key,
+                type="primary" if current == target else "secondary",
+                width="stretch",
+            ):
+                st.session_state["vs_page"] = target
+                st.rerun()
+
+
 def render_journey_card(
     kicker: str, title: str, description: str, icon: str
 ) -> None:
@@ -387,6 +458,27 @@ def render_home(language: Language) -> None:
         ):
             st.session_state["vs_page"] = "family"
             st.rerun()
+
+    st.write("")
+    render_journey_card(
+        "Journey 03 · Insurance inventory",
+        "Active Insurances",
+        (
+            "See demo policies, upload an external policy for Sarvam Document AI "
+            "extraction, and demonstrate an explicitly consented nominee summary "
+            "inside a Paytm-style demo."
+        ),
+        "🧾",
+    )
+    st.write("")
+    if st.button(
+        "Open Active Insurances",
+        key="vs_open_insurance",
+        type="primary",
+        width="stretch",
+    ):
+        st.session_state["vs_page"] = "insurance"
+        st.rerun()
 
     st.write("")
     st.markdown(note(t("home_trust_note", language)), unsafe_allow_html=True)
@@ -1191,11 +1283,14 @@ def main() -> None:
     init_session()
     language = render_header()
     render_privacy_banner(language)
+    render_top_nav(language)
     page = st.session_state.get("vs_page", "home")
     if page == "claims":
         render_claims(language)
     elif page == "family":
         render_family(language)
+    elif page == "insurance":
+        render_active_insurances(language)
     else:
         render_home(language)
     render_footer(language)

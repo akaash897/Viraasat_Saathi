@@ -1,0 +1,17 @@
+{
+  "links": [
+    {
+      "link_id": "demo-link-aarav-life-meera-01",
+      "policy_id": "demo-pol-aarav-life-03",
+      "owner_demo_user_id": "paytm.demo.aarav",
+      "nominee_demo_user_id": "paytm.demo.meera",
+      "relationship": "spouse",
+      "note": "Seeded completed demo link for the hackathon walkthrough.",
+      "owner_authorised_summary_sharing": true,
+      "nominee_acceptance_status": "ACCEPTED",
+      "demo_link_status": "ACTIVE",
+      "created_at": "2026-10-01T09:30:00+05:30",
+      "updated_at": "2026-10-02T10:15:00+05:30"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "users": [
+    {
+      "demo_user_id": "paytm.demo.aarav",
+      "display_name": "Aarav Demo",
+      "initials": "AD",
+      "is_default": true
+    },
+    {
+      "demo_user_id": "paytm.demo.meera",
+      "display_name": "Meera Demo",
+      "initials": "MD",
+      "is_default": false
+    }
+  ]
+}

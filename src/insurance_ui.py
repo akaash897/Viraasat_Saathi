@@ -39,6 +39,7 @@ from src.mock_paytm_data import (
     seeded_nominee_links_as_dicts,
     users_as_dicts,
 )
+from src.nominee_360_ui import render_nominee_360  # noqa: E402
 from src.nominee_demo import (
     RELATIONSHIP_OPTIONS,
     NomineeError,
@@ -83,6 +84,7 @@ SECTION_LABELS = {
     "bought": "Bought on Paytm",
     "external": "External Insurance",
     "nominee": "Nominee-linked Policies",
+    "nominee360": "Nominee 360",
 }
 OCR_REVIEW_NOTE = (
     "OCR is fallible. Missing fields stay Not found in document. This is not "
@@ -1225,6 +1227,12 @@ def render_active_insurances(language: str = "en") -> None:
         _render_external(users=users, owner=owner, links=links)
     elif section == "nominee":
         _render_nominee_section(users=users, owner=owner, links=links)
+    elif section == "nominee360":
+        from datetime import date as dt_date
+        render_nominee_360(
+            owner_demo_user_id=str(owner["demo_user_id"]),
+            event_date=dt_date.today(),
+        )
     else:
         _render_bought(users=users, owner=owner, links=links)
 

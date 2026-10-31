@@ -45,7 +45,7 @@ def test_translation_keys_match() -> None:
 def test_safety_copy_contains_required_warnings() -> None:
     english = t("privacy_banner", "en").lower()
     assert "do not upload real" in english
-    assert "fictional demo case" in english
+    assert "synthetic records" in english
 
     fraud = t("anti_fraud_warning", "en").lower()
     for term in ("fee", "qr code", "otp", "upi pin", "password"):

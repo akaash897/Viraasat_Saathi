@@ -1,0 +1,40 @@
+{
+  "profiles": [
+    {
+      "demo_paytm_user_id": "paytm.demo.meera",
+      "display_name": "Meera Sharma",
+      "legal_name_demo": "Meera R Sharma",
+      "date_of_birth": "1991-04-12",
+      "age_band": "ADULT",
+      "relationship_to_policyholder": "SPOUSE",
+      "profile_verified_demo": true,
+      "family_link_status": "ACCEPTED",
+      "profile_sharing_consent": true,
+      "consented_fields": ["legal_name_demo", "date_of_birth", "relationship_to_policyholder"]
+    },
+    {
+      "demo_paytm_user_id": "paytm.demo.riya",
+      "display_name": "Riya Sharma",
+      "legal_name_demo": "Riya Sharma",
+      "date_of_birth": "2012-03-04",
+      "age_band": "MINOR",
+      "relationship_to_policyholder": "DAUGHTER",
+      "profile_verified_demo": true,
+      "family_link_status": "ACCEPTED",
+      "profile_sharing_consent": true,
+      "consented_fields": ["legal_name_demo", "date_of_birth", "relationship_to_policyholder"]
+    },
+    {
+      "demo_paytm_user_id": "paytm.demo.rajesh",
+      "display_name": "Rajesh Sharma",
+      "legal_name_demo": "Rajesh K Sharma",
+      "date_of_birth": "1960-08-15",
+      "age_band": "ADULT",
+      "relationship_to_policyholder": "PARENT",
+      "profile_verified_demo": true,
+      "family_link_status": "ACCEPTED",
+      "profile_sharing_consent": true,
+      "consented_fields": ["legal_name_demo", "date_of_birth", "relationship_to_policyholder"]
+    }
+  ]
+}

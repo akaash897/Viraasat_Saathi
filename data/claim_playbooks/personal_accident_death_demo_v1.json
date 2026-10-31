@@ -1,0 +1,62 @@
+{
+  "playbook_id": "personal_accident_death_demo_v1",
+  "product_type": "personal_accident",
+  "event_relevance": "POTENTIAL_ACCIDENTAL_DEATH_BENEFIT",
+  "applicability_conditions": [
+    "Policy must contain an applicable accidental death cover",
+    "Cause of death must fall within policy definition of accident",
+    "Event must occur within policy period"
+  ],
+  "required_documents": [
+    {
+      "category": "death_certificate",
+      "label": "Death certificate",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "policy_schedule",
+      "label": "Policy document with accidental death benefit section",
+      "source": "Policy record",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "post_mortem",
+      "label": "Post-mortem report",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "fir_report",
+      "label": "FIR / police inquest report",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "claimant_identity",
+      "label": "Claimant identity proof",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "bank_proof",
+      "label": "Bank proof for claim settlement",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    }
+  ],
+  "conditional_documents": [
+    {
+      "category": "hospital_records",
+      "label": "Hospital/medical records if admitted before death",
+      "condition": "If hospitalisation occurred before death",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    }
+  ],
+  "source_urls": [
+    "https://www.irdai.gov.in/health-dept"
+  ],
+  "last_reviewed": "2026-10-01",
+  "version": 1
+}

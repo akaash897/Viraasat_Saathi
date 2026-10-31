@@ -1,0 +1,70 @@
+{
+  "playbook_id": "motor_accident_review_demo_v1",
+  "product_type": "motor",
+  "event_relevance": "MOTOR_ACCIDENT_COVER_REVIEW",
+  "applicability_conditions": [
+    "Policy must contain owner-driver personal accident cover",
+    "Death must be due to a motor accident involving the insured vehicle",
+    "Accident must occur within policy period and geographical limits"
+  ],
+  "required_documents": [
+    {
+      "category": "death_certificate",
+      "label": "Death certificate",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "policy_schedule",
+      "label": "Motor policy with owner-driver PA cover section",
+      "source": "Policy record",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "fir_report",
+      "label": "FIR / police accident report",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "post_mortem",
+      "label": "Post-mortem report",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "driving_license",
+      "label": "Valid driving license of owner-driver at time of accident",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "claimant_identity",
+      "label": "Claimant identity proof",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    }
+  ],
+  "conditional_documents": [
+    {
+      "category": "nominee_proof",
+      "label": "Nominee/legal heir proof",
+      "condition": "If owner-driver PA benefit is payable to nominee",
+      "source": "Insurer process",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "rc_book",
+      "label": "Vehicle registration certificate (RC)",
+      "condition": "If required by insurer for vehicle verification",
+      "source": "Insurer process",
+      "confirm_with_insurer": true
+    }
+  ],
+  "source_urls": [
+    "https://www.irdai.gov.in/health-dept"
+  ],
+  "last_reviewed": "2026-10-01",
+  "version": 1,
+  "note": "A standard motor policy is not automatically a death-benefit policy. Only owner-driver personal accident cover (if included) may provide a death benefit. Verify with the insurer."
+}

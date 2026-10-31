@@ -1,0 +1,57 @@
+{
+  "playbook_id": "credit_life_enquiry_demo_v1",
+  "product_type": "credit_life",
+  "event_relevance": "CREDIT_LIFE_ENQUIRY",
+  "applicability_conditions": [
+    "Deceased must be the insured borrower on the linked loan",
+    "Policy must be linked to an active loan/assignment",
+    "Loan must be outstanding at event date"
+  ],
+  "required_documents": [
+    {
+      "category": "death_certificate",
+      "label": "Death certificate",
+      "source": "Lender/insurer process",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "policy_schedule",
+      "label": "Credit life policy document",
+      "source": "Policy record",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "loan_statement",
+      "label": "Outstanding loan statement from lender",
+      "source": "Lender record",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "assignment_docs",
+      "label": "Loan assignment/endorsement on policy",
+      "source": "Policy record",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "claimant_identity",
+      "label": "Claimant identity proof",
+      "source": "Insurer/lender process",
+      "confirm_with_insurer": true
+    }
+  ],
+  "conditional_documents": [
+    {
+      "category": "nominee_proof",
+      "label": "Nominee/legal heir proof if not assigned to lender",
+      "condition": "If policy is not fully assigned to lender",
+      "source": "Insurer process",
+      "confirm_with_insurer": true
+    }
+  ],
+  "source_urls": [
+    "https://bimabharosa.irdai.gov.in/Home/FAQ"
+  ],
+  "last_reviewed": "2026-10-01",
+  "version": 1,
+  "note": "Proceeds may be applied against outstanding loan balance per contract terms. This does not guarantee loan clearance. The lender and insurer determine the final settlement."
+}

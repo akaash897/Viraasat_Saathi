@@ -1,0 +1,77 @@
+{
+  "playbook_id": "life_death_demo_v1",
+  "product_type": "life",
+  "event_relevance": "POTENTIAL_LIFE_DEATH_CLAIM",
+  "applicability_conditions": [
+    "Deceased must match the life insured on the policy",
+    "Policy must be in force at the event date",
+    "Death benefit must be applicable per policy terms"
+  ],
+  "required_documents": [
+    {
+      "category": "death_certificate",
+      "label": "Death certificate (original or attested copy)",
+      "source": "Insurer claim guide / IRDAI PPI 2024",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "policy_schedule",
+      "label": "Original policy document / certificate",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "claimant_identity",
+      "label": "Claimant identity proof (Aadhaar/PAN/Passport)",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "nominee_proof",
+      "label": "Nominee identity and relationship proof",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "bank_proof",
+      "label": "Cancelled cheque / bank passbook for NEFT",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "assignment_docs",
+      "label": "Assignment/endorsement documents if policy was assigned",
+      "source": "Policy record",
+      "confirm_with_insurer": true
+    }
+  ],
+  "conditional_documents": [
+    {
+      "category": "medical_records",
+      "label": "Medical records/hospital papers if death due to illness",
+      "condition": "If death occurred during hospitalisation or within policy-specific period",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "post_mortem",
+      "label": "Post-mortem report / FIR if accidental death",
+      "condition": "If death is accidental or unnatural",
+      "source": "Insurer claim guide",
+      "confirm_with_insurer": true
+    },
+    {
+      "category": "guardian_certificate",
+      "label": "Legal guardian certificate if nominee is minor",
+      "condition": "If registered nominee is a minor",
+      "source": "Section 39 Insurance Act 1938 / Insurer process",
+      "confirm_with_insurer": true
+    }
+  ],
+  "source_urls": [
+    "https://www.irdai.gov.in/health-dept",
+    "https://bimabharosa.irdai.gov.in/Home/FAQ"
+  ],
+  "last_reviewed": "2026-10-01",
+  "version": 1
+}

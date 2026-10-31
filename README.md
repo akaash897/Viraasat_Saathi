@@ -79,19 +79,20 @@ The app shows a persistent banner:
 
 ### Active Insurances (Phase 2, additive)
 
-- **Bought on Paytm (simulated).** Seeded fictional users (`paytm.demo.aarav`, `paytm.demo.meera`) and four clearly fictional policies across health, motor, life and travel. Switching the demo user filters the inventory. No Paytm API, SDK, credential, OTP, UPI PIN or real authentication exists anywhere in this path; the UI carries a persistent **“Independent hackathon prototype · Paytm-style demo · No live Paytm connection”** label.
+- **Login / Logout with preset credentials.** The app opens at a sign-in screen with two prototype accounts (Aarav Sharma / aarav123, Meera Sharma / meera123). After signing in, the top-right header shows the signed-in profile with a **Log out** button. No Paytm API, SDK, credential, OTP, UPI PIN or real authentication exists anywhere in this path.
+- **Bought on Paytm.** Seeded fictional users (`paytm.demo.aarav`, `paytm.demo.meera`) and four clearly fictional policies across health, motor, life and travel. The inventory is scoped to the signed-in account; switching accounts is done by logging out and back in. The UI carries a persistent **“Independent hackathon prototype · Paytm-style experience · No live Paytm connection”** label.
+- **Policy document viewer.** Every policy card has **Summary** and **Policy document** tabs. The document tab renders a generated PDF (seeded policies) or the uploaded file bytes (external policies) with a download button. Files are held in memory for the session and are never written to disk.
 - **External Insurance (real Sarvam Document AI when configured).** PDF, PNG, JPG and JPEG only; 10 MB maximum; 20 PDF pages maximum; ZIP and TIFF rejected by extension and magic-byte checks. The exact upload disclosure is shown before the file picker. The consent checkbox is unchecked by default, and no Sarvam call happens until it is ticked and **Process document** is pressed. Files are held in memory for the request and are never written to disk.
 - **Sarvam Extract lifecycle.** The adapter submits `client.doc_ai.extract`, polls `get_status` to `completed` / `partially_completed` / `failed` / `rejected`, then reads `get_results`. A missing key, disabled flag, timeout, rejected document, unreadable response or SDK/network error produces a visible error and leaves the seeded policies available. It never fabricates OCR success.
 - **Review queue, not verification.** A successful extraction creates a session-only record with status `OCR_EXTRACTED_NEEDS_REVIEW`. Missing fields stay **Not found in document**. Incomplete or uncertain insurance results also go to Needs review. Clearly non-insurance documents (for example a bank statement, Aadhaar card or invoice) are not added. Only an explicit user review with an authorisation checkbox changes the status to `USER_REVIEWED_UNVERIFIED`; this still does **not** verify the policy with the insurer or prove it is active.
-- **Nominee-linked Policies (simulated).** The nominee must be chosen from the seeded mock directory and only after the owner ticks a confirmation checkbox. Summary sharing is a separate checkbox and is **off by default**. The nominee can accept or decline; the owner can revoke. Policy details are shown only after acceptance **and** explicit owner-authorised sharing, and then only as a limited summary (masked policy number; no full document, premium or full policy number). Every screen says **“Insurer nomination not verified”** and explains that this is not a legal nomination.
-- **Reset.** **Reset insurance demo** removes session-created external records and nominee changes, then restores the seeded demo policies and seeded accepted link. The global **Reset demo** also clears all Phase 2 state.
+- **Nominee-linked Policies (family-sharing links).** The nominee must be chosen from the seeded directory and only after the owner ticks a confirmation checkbox. Summary sharing is a separate checkbox and is **off by default**. The nominee can accept or decline; the owner can revoke. Policy details are shown only after acceptance **and** explicit owner-authorised sharing, and then only as a limited summary (masked policy number; no full document, premium or full policy number). Every screen says **“Insurer nomination not verified”** and explains that this is not a legal nomination.
+- **No reset.** The **Reset insurance demo** button has been removed. Session state for policies and nominee links persists across logout/login so the nominee flow can be demonstrated by switching accounts.
 
 ### Shared
 
-- English / Hindi UI toggle with reviewed static strings for key labels, instructions, status wording, fallbacks and all safety-critical disclaimers. **Active Insurances is intentionally English-only in Phase 2**, while the Phase 1 journeys keep their existing Hindi/English behaviour.
+- English-only UI (Hindi toggle removed). Reviewed static strings for key labels, instructions, status wording, fallbacks and all safety-critical disclaimers.
 - Calm off-white / navy / teal / restrained saffron visual theme.
-- Persistent “Independent hackathon prototype · Demo data” label.
-- **Reset demo** clears all session data and returns to the synthetic case.
+- Persistent “Independent hackathon prototype · Synthetic data” label.
 - **Sources & limitations** expander listing every official link and what the prototype cannot verify.
 - Optional Sarvam AI paraphrase for fictional checklist content only. The app works fully with no API key and no internet access.
 
@@ -412,10 +413,12 @@ The suite covers:
 
 ### 2:15–3:05 — Active Insurances (Phase 2)
 
-1. Go back home and open **Active Insurances**.
-2. Show the persistent **“Independent hackathon prototype · Paytm-style demo · No live Paytm connection”** strip and Aarav Demo’s three seeded policies. Switch to **Meera Demo** to show the inventory changes.
-3. Open **External Insurance**. Point out the exact disclosure, the unchecked acknowledgement and the disabled upload/process controls. If a real key is configured, upload a **synthetic** PDF/PNG/JPG/JPEG, tick the box, press **Process document**, then show the `OCR_EXTRACTED_NEEDS_REVIEW` record and its review form. If no key is configured, show **“Add SARVAM_API_KEY to .env to enable document extraction.”** and explain that no fake OCR is returned.
-4. Open **Nominee-linked Policies** as Meera Demo. Show the seeded accepted demo link and the limited summary (masked policy number, no premium or full number). Read **“Insurer nomination not verified.”** Then switch to Aarav Demo, open **Manage nominee** on the health policy (the seeded link is on the life policy), show that the owner confirmation is unticked and summary sharing is off by default, create a simulated link, switch back to Meera, and accept or decline it.
+1. **Start at the sign-in screen.** Show the two preset accounts (Aarav Sharma / aarav123, Meera Sharma / meera123). Sign in as **Aarav Sharma**. The top-right header now shows the signed-in profile with **Log out**.
+2. Open **Active Insurances**. Show the persistent **“Independent hackathon prototype · Paytm-style experience · No live Paytm connection”** strip and Aarav Sharma’s three seeded policies. The inventory is scoped to the signed-in account.
+3. Click the **Policy document** tab on any policy card. Show the generated PDF preview with masked policy number and the **Download policy document** button. Explain that seeded policies generate PDFs on the fly; uploaded external policies show the original file bytes.
+4. **Switch accounts via logout/login:** click **Log out** (top right), then sign in as **Meera Sharma**. Open **Active Insurances** — Meera sees only her Travel policy. Log out and back in as Aarav to continue.
+5. Open **External Insurance**. Point out the exact disclosure, the unchecked acknowledgement and the disabled upload/process controls. If a real key is configured, upload a **synthetic** PDF/PNG/JPG/JPEG, tick the box, press **Process document**, then show the `OCR_EXTRACTED_NEEDS_REVIEW` record and its review form. If no key is configured, show **“Add SARVAM_API_KEY to .env to enable document extraction.”** and explain that no fake OCR is returned.
+6. Open **Nominee-linked Policies** as Meera Sharma. Show the seeded accepted family-sharing link and the limited summary (masked policy number, no premium or full number). Read **“Insurer nomination not verified.”** Then switch to Aarav Sharma (logout/login), open **Manage nominee** on the health policy, show that the owner confirmation is unticked and summary sharing is off by default, create a sharing link, switch back to Meera, and accept or decline it.
 
 ### 3:05–3:25 — Trust and AI
 
@@ -428,8 +431,8 @@ The suite covers:
 ## 11. Known limitations and out of scope
 
 - No live banking, insurer, UPI-mandate, government-portal or Account Aggregator integration.
-- No real Paytm transaction-history access, Paytm API/SDK, credentials or authentication; all Paytm-style data and nominee links are simulated.
-- No login, authentication, Aadhaar, OTP or account access.
+- No real Paytm transaction-history access, Paytm API/SDK, credentials or authentication; all Paytm-style data and family-sharing links are local to the prototype.
+- The prototype includes a local **sign-in screen with preset credentials** for demonstration; this is not a real authentication system. No Aadhaar, OTP or account access.
 - No claim submission, settlement, money transfer, account closure, loan repayment or mandate cancellation.
 - No email/SMS/WhatsApp notification integration.
 - No universal claims checklist and no legal/regulatory deadline calculation.
@@ -437,7 +440,7 @@ The suite covers:
 - No handwriting extraction, medical interpretation or document authenticity verification.
 - **Sarvam Document AI output is OCR, not insurer verification.** It can miss, misread or misclassify fields. Missing values remain **Not found in document**; users must review before relying on a record.
 - The external policy inventory is session-only; there is no insurer feed, policy verification, renewal check or active-cover confirmation.
-- Nominee linking is a **simulated Paytm-ID demo**, not an insurer nomination, legal heir determination or authority verification. A death certificate alone is not presented as sufficient authority for every record or asset.
+- Nominee linking is a **family-sharing link inside the prototype**, not an insurer nomination, legal heir determination or authority verification. A death certificate alone is not presented as sufficient authority for every record or asset.
 - No arbitrary real-policy Q&A; the policy answers come from the fictional fixture only.
 - No public cloud deployment that accepts real health/financial documents.
 - No voice/audio mode.

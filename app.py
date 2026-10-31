@@ -18,48 +18,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from src.claims_engine import (  # noqa: E402
-    answer_policy_topic,
-    case_summary_text,
-    checklist_progress,
-    checklist_status,
-    validate_claim_against_policy,
-)
-from src.document_parser import (  # noqa: E402
-    UploadError,
-    extract_pdf_text_in_memory,
-    extract_text_in_memory,
-    parse_transactions_csv,
-    validate_upload,
-)
-from src.draft_templates import (  # noqa: E402
-    DRAFT_KIND_KEYS,
-    draft_kind_label,
-    generate_draft,
-)
-from src.fixtures import (  # noqa: E402
-    load_claim,
-    load_demo_transactions_bytes,
-    load_policy,
-    load_source_registry,
-)
 from src.insurance_ui import render_active_insurances  # noqa: E402
 from src.mock_auth import authenticate, login_id_for_user, preset_accounts  # noqa: E402
 from src.mock_paytm_data import demo_user_by_id  # noqa: E402
-from src.models import DemoClaim, Language  # noqa: E402
+from src.models import Language  # noqa: E402
+from src.nominee_360_ui import render_nominee_360  # noqa: E402
+from src.chatbot_ui import render_chatbot  # noqa: E402
 from src.safety import format_inr  # noqa: E402
 from src.sarvam_service import (  # noqa: E402
-    ALLOWED_MISSING_CATEGORIES,
-    FIXED_SOURCE_EXCERPTS,
     SarvamConfig,
-    SarvamService,
-    deterministic_explanation,
 )
-from src.transaction_matcher import (  # noqa: E402
-    category_label,
-    match_transactions,
-)
-from src.translations import t, topic_label  # noqa: E402
+from src.fixtures import load_source_registry  # noqa: E402
+from src.translations import t  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -577,13 +547,13 @@ def render_privacy_banner(language: Language) -> None:
 
 
 def render_top_nav(language: Language) -> None:
-    """Compact navigation shared by the Phase 1 and Phase 2 journeys."""
+    """Compact navigation for Active Insurances and related features."""
     current = str(st.session_state.get("vs_page", "home"))
     items = [
         ("home", "Home", "vs_nav_home"),
-        ("claims", "Claims Companion", "vs_nav_claims"),
-        ("family", "Family Finance Finder", "vs_nav_family"),
         ("insurance", "Active Insurances", "vs_nav_insurance"),
+        ("nominee360", "Nominee 360", "vs_nav_nominee360"),
+        ("chatbot", "AI Assistant", "vs_nav_chatbot"),
     ]
     columns = st.columns(len(items))
     for column, (target, label, key) in zip(columns, items):
@@ -619,43 +589,8 @@ def render_home(language: Language) -> None:
     st.caption(t("home_sub", language))
     st.write("")
 
-    left, right = st.columns(2, gap="large")
-    with left:
-        render_journey_card(
-            t("journey_01", language),
-            t("claims_card_title", language),
-            t("claims_card_desc", language),
-            "🛡️",
-        )
-        st.write("")
-        if st.button(
-            t("claims_card_cta", language),
-            key="vs_open_claims",
-            type="primary",
-            width="stretch",
-        ):
-            st.session_state["vs_page"] = "claims"
-            st.rerun()
-    with right:
-        render_journey_card(
-            t("journey_02", language),
-            t("family_card_title", language),
-            t("family_card_desc", language),
-            "🔎",
-        )
-        st.write("")
-        if st.button(
-            t("family_card_cta", language),
-            key="vs_open_family",
-            type="primary",
-            width="stretch",
-        ):
-            st.session_state["vs_page"] = "family"
-            st.rerun()
-
-    st.write("")
     render_journey_card(
-        "Journey 03 · Insurance inventory",
+        "Journey 01 · Insurance inventory",
         "Active Insurances",
         (
             "See your policies, upload an external policy for Sarvam Document AI "
@@ -672,6 +607,47 @@ def render_home(language: Language) -> None:
         width="stretch",
     ):
         st.session_state["vs_page"] = "insurance"
+        st.rerun()
+
+    st.write("")
+    render_journey_card(
+        "Journey 02 · Nominee intelligence",
+        "Nominee 360",
+        (
+            "Compare nominee details across your policy portfolio against "
+            "consented family profiles. Detect name/DOB/relationship discrepancies, "
+            "minor/appointee flags, and allocation issues."
+        ),
+        "👥",
+    )
+    st.write("")
+    if st.button(
+        "Open Nominee 360",
+        key="vs_open_nominee360",
+        type="primary",
+        width="stretch",
+    ):
+        st.session_state["vs_page"] = "nominee360"
+        st.rerun()
+
+    st.write("")
+    render_journey_card(
+        "Journey 03 · AI Assistant",
+        "AI Assistant",
+        (
+            "Ask questions about your policies, nominee findings, claim processes, "
+            "or insurance concepts. Powered by Nemotron 3 Ultra via OpenRouter."
+        ),
+        "🤖",
+    )
+    st.write("")
+    if st.button(
+        "Open AI Assistant",
+        key="vs_open_chatbot",
+        type="primary",
+        width="stretch",
+    ):
+        st.session_state["vs_page"] = "chatbot"
         st.rerun()
 
     st.write("")
@@ -1484,12 +1460,12 @@ def main() -> None:
     render_privacy_banner(language)
     render_top_nav(language)
     page = st.session_state.get("vs_page", "home")
-    if page == "claims":
-        render_claims(language)
-    elif page == "family":
-        render_family(language)
-    elif page == "insurance":
+    if page == "insurance":
         render_active_insurances(language)
+    elif page == "nominee360":
+        render_nominee_360(owner_demo_user_id=str(user["demo_user_id"]))
+    elif page == "chatbot":
+        render_chatbot(user_demo_user_id=str(user["demo_user_id"]))
     else:
         render_home(language)
     render_footer(language)

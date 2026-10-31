@@ -19,6 +19,7 @@ responses or document content.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -81,6 +82,89 @@ FIXED_SOURCE_EXCERPTS: dict[str, str] = {
         "document or imply insurer acceptance."
     ),
 }
+
+# ===== Sarvam-105B schemas for Phase 2 Update =====
+
+NOMINEE_FINDING_EXPLANATION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "portfolio_summary": {"type": "string"},
+        "finding_explanations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "finding_id": {"type": "string"},
+                    "plain_language_explanation": {"type": "string"},
+                    "what_to_verify": {"type": "string"},
+                    "source_ids": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["finding_id", "plain_language_explanation", "what_to_verify", "source_ids"],
+            },
+        },
+        "portfolio_note": {"type": "string"},
+    },
+    "required": ["portfolio_summary", "finding_explanations", "portfolio_note"],
+}
+
+CLAIM_ORCHESTRATOR_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "portfolio_summary": {"type": "string"},
+        "workflow_explanations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "workflow_id": {"type": "string"},
+                    "plain_language_explanation": {"type": "string"},
+                    "what_to_verify": {"type": "string"},
+                    "source_ids": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["workflow_id", "plain_language_explanation", "what_to_verify", "source_ids"],
+            },
+        },
+        "portfolio_note": {"type": "string"},
+    },
+    "required": ["portfolio_summary", "workflow_explanations", "portfolio_note"],
+}
+
+MAX_105B_OUTPUT_CHARS = 3000
+
+NOMINEE_SYSTEM_PROMPT = (
+    "You are an assistant for a hackathon demo. Explain nominee consistency findings "
+    "in plain language. Do not decide legal eligibility, identity matches, or insurer "
+    "registration. Do not say a nominee is valid/invalid or eligible/ineligible. "
+    "Only explain what the finding means and what the user should verify with the insurer. "
+    "Output MUST conform to the provided JSON schema. No extra text."
+)
+
+NOMINEE_USER_PROMPT_TEMPLATE = (
+    "Language: {language_name}\n"
+    "Portfolio findings (redacted):\n{findings_json}\n\n"
+    "Task: For each finding, provide a plain-language explanation and what to verify. "
+    "Group similar findings. Keep explanations non-adjudicative. "
+    "Output ONLY valid JSON matching the schema."
+)
+
+CLAIM_ORCHESTRATOR_SYSTEM_PROMPT = (
+    "You are an assistant for a hackathon demo. Explain a family claim orchestration plan "
+    "in plain language. Do not decide coverage, eligibility, claim approval, or settlement. "
+    "Only explain the rule engine's output and what the user should verify with each insurer. "
+    "Output MUST conform to the provided JSON schema. No extra text."
+)
+
+CLAIM_ORCHESTRATOR_USER_PROMPT_TEMPLATE = (
+    "Language: {language_name}\n"
+    "Family claim batch (redacted):\n{batch_json}\n\n"
+    "Task: For each child workflow, explain the event relevance, checklist, and next steps. "
+    "Do not invent requirements. Only explain the deterministic rule output. "
+    "Output ONLY valid JSON matching the schema."
+)
+
+DEFAULT_105B_MODEL = "sarvam-105b"
+DEFAULT_105B_TIMEOUT_SECONDS = 10.0
+DEFAULT_105B_MAX_OUTPUT_TOKENS = 2000
 
 CATEGORY_PROMPT_LABELS: dict[str, str] = {
     "claim_form": "completed claim form",
@@ -365,5 +449,249 @@ class SarvamService:
             language=language,
             missing_category=missing_category,
             source_excerpt_id=source_excerpt_id,
+            elapsed_ms=elapsed_ms,
+        )
+
+    # ===== Sarvam-105B methods for Phase 2 Update =====
+
+    def explain_nominee_findings(
+        self,
+        language: Literal["en", "hi"],
+        findings: list[dict[str, Any]],
+        language_name: str,
+    ) -> SarvamExplanation:
+        """Explain nominee consistency findings via Sarvam-105B with structured output."""
+        if language not in ALLOWED_LANGUAGES:
+            raise ValueError("unsupported language")
+
+        if not self.config.is_configured:
+            return self._fallback_105b(
+                language=language,
+                status="disabled",
+                explanation_type="nominee",
+            )
+
+        findings_json = json.dumps(findings, ensure_ascii=False)
+        user_prompt = NOMINEE_USER_PROMPT_TEMPLATE.format(
+            language_name=language_name,
+            findings_json=findings_json,
+        )
+        messages = [
+            {"role": "system", "content": NOMINEE_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        started = time.monotonic()
+        try:
+            content = self._call_api_105b(messages, NOMINEE_FINDING_EXPLANATION_SCHEMA)
+            parsed = json.loads(content)
+            # Validate required fields
+            if not all(k in parsed for k in ("portfolio_summary", "finding_explanations", "portfolio_note")):
+                raise ValueError("response missing required fields")
+            text = json.dumps(parsed, ensure_ascii=False)
+        except Exception as e:
+            elapsed = int((time.monotonic() - started) * 1000)
+            logger.info("sarvam_105b_nominee status=fallback elapsed_ms=%d error=%s", elapsed, str(e)[:100])
+            return self._fallback_105b(
+                language=language,
+                status="fallback",
+                explanation_type="nominee",
+                elapsed_ms=elapsed,
+            )
+
+        elapsed = int((time.monotonic() - started) * 1000)
+        logger.info("sarvam_105b_nominee status=success elapsed_ms=%d", elapsed)
+        return SarvamExplanation(
+            text=text,
+            ai_used=True,
+            status="success",
+            language=language,
+            missing_category="nominee_findings",  # repurposed field
+            source_excerpt_id="nominee_360",       # repurposed field
+            elapsed_ms=elapsed,
+        )
+
+    def explain_claim_orchestrator_plan(
+        self,
+        language: Literal["en", "hi"],
+        batch: dict[str, Any],
+        workflows: list[dict[str, Any]],
+        playbooks: dict[str, Any],
+        language_name: str,
+    ) -> SarvamExplanation:
+        """Explain family claim orchestrator plan via Sarvam-105B with structured output."""
+        if language not in ALLOWED_LANGUAGES:
+            raise ValueError("unsupported language")
+
+        if not self.config.is_configured:
+            return self._fallback_105b(
+                language=language,
+                status="disabled",
+                explanation_type="claim_orchestrator",
+            )
+
+        batch_json = json.dumps({
+            "batch_id": batch.get("batch_id"),
+            "event_type": batch.get("event_type"),
+            "event_date": batch.get("event_date"),
+            "deceased_demo_user_id": batch.get("deceased_demo_user_id"),
+            "child_workflow_count": len(workflows),
+        }, ensure_ascii=False)
+
+        workflows_json = json.dumps([{
+            "workflow_id": w.get("workflow_id"),
+            "policy_id": w.get("policy_id"),
+            "event_relevance": w.get("event_relevance"),
+            "claimant_capacity": w.get("claimant_capacity"),
+            "playbook_id": w.get("playbook_id"),
+            "status": w.get("status"),
+        } for w in workflows], ensure_ascii=False)
+
+        playbooks_json = json.dumps({
+            pid: {
+                "playbook_id": pb.get("playbook_id"),
+                "product_type": pb.get("product_type"),
+                "required_docs": [d.get("category") for d in pb.get("required_documents", [])],
+            } for pid, pb in playbooks.items()
+        }, ensure_ascii=False)
+
+        user_prompt = CLAIM_ORCHESTRATOR_USER_PROMPT_TEMPLATE.format(
+            language_name=language_name,
+            batch_json=f"Batch: {batch_json}\nWorkflows: {workflows_json}\nPlaybooks: {playbooks_json}",
+        )
+        messages = [
+            {"role": "system", "content": CLAIM_ORCHESTRATOR_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        started = time.monotonic()
+        try:
+            content = self._call_api_105b(messages, CLAIM_ORCHESTRATOR_SCHEMA)
+            parsed = json.loads(content)
+            if not all(k in parsed for k in ("portfolio_summary", "workflow_explanations", "portfolio_note")):
+                raise ValueError("response missing required fields")
+            text = json.dumps(parsed, ensure_ascii=False)
+        except Exception as e:
+            elapsed = int((time.monotonic() - started) * 1000)
+            logger.info("sarvam_105b_claim status=fallback elapsed_ms=%d error=%s", elapsed, str(e)[:100])
+            return self._fallback_105b(
+                language=language,
+                status="fallback",
+                explanation_type="claim_orchestrator",
+                elapsed_ms=elapsed,
+            )
+
+        elapsed = int((time.monotonic() - started) * 1000)
+        logger.info("sarvam_105b_claim status=success elapsed_ms=%d", elapsed)
+        return SarvamExplanation(
+            text=text,
+            ai_used=True,
+            status="success",
+            language=language,
+            missing_category="claim_orchestrator",
+            source_excerpt_id="family_claims",
+            elapsed_ms=elapsed,
+        )
+
+    def _call_api_105b(self, messages: list[dict[str, str]], schema: dict[str, Any]) -> str:
+        """Call LLM with structured output. Uses OpenRouter with Nemotron 3 Ultra (free) by default."""
+        # Allow model/provider override via env
+        model = os.environ.get("LLM_105B_MODEL", "nvidia/nemotron-3-ultra")
+        timeout = float(os.environ.get("LLM_105B_TIMEOUT_SECONDS", str(DEFAULT_105B_TIMEOUT_SECONDS)))
+        max_tokens = int(os.environ.get("LLM_105B_MAX_OUTPUT_TOKENS", str(DEFAULT_105B_MAX_OUTPUT_TOKENS)))
+        base_url = os.environ.get("LLM_105B_BASE_URL", "https://openrouter.ai/api/v1")
+        api_key = os.environ.get("LLM_105B_API_KEY", os.environ.get("OPENROUTER_API_KEY", ""))
+
+        if not api_key:
+            raise ValueError("LLM_105B_API_KEY or OPENROUTER_API_KEY not configured")
+
+        from openai import OpenAI
+        client = OpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=timeout,
+            max_retries=0,
+        )
+
+        # Try 1: response_format with json_schema (OpenAI-compatible)
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=0.2,
+                max_tokens=max_tokens,
+                timeout=timeout,
+                response_format={"type": "json_schema", "json_schema": {"name": "structured_output", "schema": schema, "strict": True}},
+            )
+            content = response.choices[0].message.content
+            if not isinstance(content, str) or not content.strip():
+                raise ValueError("provider returned empty text")
+            json.loads(content)
+            return content
+        except Exception as e:
+            logger.info("LLM response_format failed: %s, falling back to prompt-only", str(e)[:200])
+
+        # Try 2: Prompt-only with schema instructions in system message
+        schema_instruction = (
+            "\n\nYou MUST output ONLY valid JSON matching this schema:\n"
+            f"{json.dumps(schema, ensure_ascii=False)}\n"
+            "No extra text, no markdown, no explanation."
+        )
+        fallback_messages = messages.copy()
+        fallback_messages[0] = {
+            "role": "system",
+            "content": fallback_messages[0]["content"] + schema_instruction
+        }
+
+        response = client.chat.completions.create(
+            model=model,
+            messages=fallback_messages,
+            temperature=0.1,
+            max_tokens=max_tokens,
+            timeout=timeout,
+        )
+        content = response.choices[0].message.content
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("provider returned empty text")
+        content = content.strip()
+        if content.startswith("```"):
+            lines = content.split("\n")
+            content = "\n".join(lines[1:-1]) if len(lines) > 2 else content
+        json.loads(content)  # Validate
+        return content
+
+    def _fallback_105b(
+        self,
+        language: Language,
+        status: SarvamStatus,
+        explanation_type: Literal["nominee", "claim_orchestrator"],
+        elapsed_ms: int = 0,
+    ) -> SarvamExplanation:
+        if explanation_type == "nominee":
+            fallback_text = (
+                "AI explanation unavailable. Deterministic fallback:\n"
+                "- Each finding shows the policy, source values, and what to verify with the insurer.\n"
+                "- Severity: INFO = informational; ATTENTION = data inconsistency; REVIEW_REQUIRED = needs human check.\n"
+                "- Actions: 'Reviewed — no change', 'Correct demo data', 'Intentionally different', 'Ask insurer'.\n"
+                "- This is a data-consistency check only — not legal eligibility or insurer registration."
+            )
+        else:
+            fallback_text = (
+                "AI explanation unavailable. Deterministic fallback:\n"
+                "- Each child workflow corresponds to one policy with a deterministic event relevance.\n"
+                "- Life policies with matching insured → potential death claim.\n"
+                "- Health policies → only outstanding medical expense enquiry if expenses exist.\n"
+                "- Motor policies → only if owner-driver PA cover + accident evidence.\n"
+                "- Credit-life → enquiry with lender; proceeds may apply to loan balance.\n"
+                "- Checklists come from versioned local playbooks. Confirm every item with the insurer.\n"
+                "- No insurer status is implied. User must confirm before any workflow is created."
+            )
+        return SarvamExplanation(
+            text=fallback_text,
+            ai_used=False,
+            status=status,
+            language=language,
+            missing_category=explanation_type,
+            source_excerpt_id="fallback",
             elapsed_ms=elapsed_ms,
         )

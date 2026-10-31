@@ -469,7 +469,8 @@ def test_nominee_requires_owner_action_and_sharing_defaults_off() -> None:
     assert link["nominee_acceptance_status"] == "PENDING"
     assert link["demo_link_status"] == "ACTIVE"
     assert link["owner_authorised_summary_sharing"] is False
-    assert "Awaiting demo acceptance" in nominee_status_label(link)
+    assert "Awaiting acceptance" in nominee_status_label(link)
+    assert "demo" not in nominee_status_label(link).lower()
     assert "insurer nomination not verified" in nominee_status_label(link).lower()
 
 
@@ -591,53 +592,335 @@ def test_seeded_nominee_link_is_visible_to_meera() -> None:
     assert accepted
     summary = limited_shared_summary(accepted[0], records, "paytm.demo.meera")
     assert summary is not None
-    assert summary["insurer_name"] == "Suraksha Life Demo Insurance Co."
+    assert summary["insurer_name"] == "Suraksha Life Insurance Co."
 
 
-def test_active_insurances_ui_sections_and_user_switch() -> None:
+def test_nominee_status_label_uses_acceptance_not_demo() -> None:
+    """nominee_status_label should say 'Awaiting acceptance' not 'Awaiting demo acceptance'."""
+    users = users_as_dicts()
+    policy = paytm_policy()
+    link = create_nominee_link(
+        policy=policy,
+        owner_demo_user_id="paytm.demo.aarav",
+        nominee_demo_user_id="paytm.demo.meera",
+        relationship="spouse",
+        note="",
+        owner_confirmed=True,
+        share_summary=False,
+        users=users,
+        existing_links=[],
+    )
+    assert "Awaiting acceptance" in nominee_status_label(link)
+    assert "demo" not in nominee_status_label(link).lower()
+
+
+def has_widget(at: AppTest, collection: str, key: str) -> bool:
+    try:
+        getattr(at, collection)(key=key)
+        return True
+    except KeyError:
+        return False
+
+
+def has_button(at: AppTest, key: str) -> bool:
+    return has_widget(at, "button", key)
+
+
+def login_at(at: AppTest, login_id: str = "aarav") -> None:
+    """Sign in using preset credentials."""
+    passwords = {"aarav": "aarav123", "meera": "meera123"}
+    password = passwords.get(login_id, "aarav123")
+    at.text_input(key="vs_login_id").set_value(login_id)
+    at.text_input(key="vs_login_password").set_value(password)
+    at.button(key="vs_login_submit").click().run()
+
+
+def visible_text(at: AppTest) -> str:
+    parts: list[str] = []
+    for item in at.markdown:
+        val = str(item.value)
+        if "<style>" not in val:
+            parts.append(val)
+    for item in at.caption:
+        parts.append(str(item.value))
+    for item in at.info:
+        parts.append(str(item.value))
+    for item in at.warning:
+        parts.append(str(item.value))
+    for item in at.error:
+        parts.append(str(item.value))
+    for item in at.success:
+        parts.append(str(item.value))
+    return "\n".join(parts)
+
+
+def test_active_insurances_account_scoped_and_no_user_switch() -> None:
+    """Logged-in user sees only their policies; no user switcher; no demo/simulated wording."""
     at = AppTest.from_file(APP_PATH, default_timeout=30).run()
-    assert not at.exception
+    login_at(at, "aarav")
     at.button(key="vs_nav_insurance").click().run()
     assert not at.exception
-    markdown = "\n".join(str(item.value) for item in at.markdown)
-    assert "Active Insurances" in markdown
-    assert (
-        "Independent hackathon prototype · Paytm-style demo · "
-        "No live Paytm connection"
-    ) in markdown
-    assert "Bought on Paytm" in markdown
-    assert any("Aarogya" in str(item.value) for item in at.markdown)
 
-    at.selectbox(key="vs_insurance_active_user_id").set_value("paytm.demo.meera").run()
+    text = visible_text(at)
+    # Header prototype label
+    assert "Independent hackathon prototype · Paytm-style experience" in text
+    assert "No live Paytm connection" in text
+    # Section labels - check via radio options
+    section_radio = at.radio(key="vs_insurance_section")
+    section_labels = [opt for opt in section_radio.options]
+    assert "Bought on Paytm" in section_labels
+    assert "External Insurance" in section_labels
+    assert "Nominee-linked Policies" in section_labels
+    # Aarav's policies
+    assert "Aarogya" in text
+    assert "Drive" in text
+    assert "Jeevan" in text
+    # Meera's policy should NOT appear
+    assert "Yatra" not in text
+    # No demo/simulated wording in visible text
+    assert "demo" not in text.lower()
+    assert "simulated" not in text.lower()
+    # No user switcher selectbox
+    assert not has_widget(at, "selectbox", "vs_insurance_active_user_id")
+    # Profile shows in header area (logout button present)
+    assert has_button(at, "vs_logout")
+
+
+def test_active_insurances_switch_user_via_logout_login() -> None:
+    """Switching accounts is done via logout/login, not a user switcher."""
+    at = AppTest.from_file(APP_PATH, default_timeout=30).run()
+    login_at(at, "aarav")
+    at.button(key="vs_nav_insurance").click().run()
     assert not at.exception
-    assert any("Yatra" in str(item.value) for item in at.markdown)
+    text = visible_text(at)
+    assert "Aarogya" in text
+    assert "Yatra" not in text
 
+    # Logout
+    at.button(key="vs_logout").click().run()
+    assert not at.exception
+    assert at.session_state["vs_auth_user_id"] is None
+
+    # Login as Meera
+    login_at(at, "meera")
+    at.button(key="vs_nav_insurance").click().run()
+    assert not at.exception
+    text = visible_text(at)
+    assert "Yatra" in text
+    assert "Aarogya" not in text
+    assert "Drive" not in text
+    assert "Jeevan" not in text
+
+
+def test_external_insurance_shows_disclosure_and_upload_controls() -> None:
+    """External section shows the Sarvam disclosure and upload controls."""
+    at = AppTest.from_file(APP_PATH, default_timeout=30).run()
+    login_at(at, "aarav")
+    at.button(key="vs_nav_insurance").click().run()
     at.radio(key="vs_insurance_section").set_value("external").run()
     assert not at.exception
-    assert any(
-        "Add SARVAM_API_KEY to .env to enable document extraction." in str(item.value)
-        for item in at.warning
-    )
 
+    text = visible_text(at)
+    assert "Add an external policy document" in text
+    assert "Sarvam AI Document AI" in text
+    assert "authorised to share" in text
+    # Upload controls present
+    assert at.file_uploader(key="vs_insurance_upload_0")
+    assert at.checkbox(key="vs_insurance_upload_ack_0")
+
+
+def test_nominee_section_shows_limited_summary_for_meera() -> None:
+    """Meera sees the seeded accepted sharing link with limited summary."""
+    at = AppTest.from_file(APP_PATH, default_timeout=30).run()
+    login_at(at, "meera")
+    at.button(key="vs_nav_insurance").click().run()
     at.radio(key="vs_insurance_section").set_value("nominee").run()
     assert not at.exception
-    markdown = "\n".join(str(item.value) for item in at.markdown)
-    visible_text = "\n".join(
-        str(item.value) for item in list(at.markdown) + list(at.caption)
-    )
-    assert "Nominee-linked Policies" in markdown
-    assert "Limited summary" in visible_text
-    assert "Insurer nomination not verified" in visible_text
+
+    text = visible_text(at)
+    assert "Limited summary" in text
+    assert "Insurer nomination not verified" in text
+    assert "Shared by" in text
+    assert "Aarav Sharma" in text
+    assert "Jeevan" in text
+    assert "demo" not in text.lower()
 
 
-def test_reset_insurance_demo_ui_clears_session_records() -> None:
+def test_policy_document_viewer_tab_and_download() -> None:
+    """Each policy card has Summary and Policy document tabs; download buttons exist."""
     at = AppTest.from_file(APP_PATH, default_timeout=30).run()
+    login_at(at, "aarav")
     at.button(key="vs_nav_insurance").click().run()
-    at.session_state["vs_insurance_external_policies"] = [
-        {"policy_id": "session-only", "source_type": "EXTERNAL_DOCUMENT"}
-    ]
-    at.run()
-    at.button(key="vs_insurance_reset_demo").click().run()
     assert not at.exception
-    assert at.session_state["vs_insurance_external_policies"] == []
-    assert len(at.session_state["vs_insurance_links"]) == 1
+
+    # Check that download buttons for policy documents exist
+    download_buttons = [d for d in at.download_button if "vs_download_policy_doc_" in d.key]
+    assert len(download_buttons) >= 3  # Aarav has 3 seeded policies
+    # Verify keys match expected pattern
+    policy_ids = [db.key.replace("vs_download_policy_doc_", "") for db in download_buttons]
+    assert "demo-pol-aarav-health-01" in policy_ids
+    assert "demo-pol-aarav-motor-02" in policy_ids
+    assert "demo-pol-aarav-life-03" in policy_ids
+
+    # Tabs should be present (Summary, Policy document)
+    tab_labels = [t.label for t in at.tabs]
+    assert "Summary" in tab_labels
+    assert "Policy document" in tab_labels
+
+
+def test_logout_preserves_external_policies_and_nominee_links() -> None:
+    """Policy records and nominee links persist across logout/login."""
+    at = AppTest.from_file(APP_PATH, default_timeout=30).run()
+    login_at(at, "aarav")
+    at.button(key="vs_nav_insurance").click().run()
+    # Verify seeded policies present
+    text = visible_text(at)
+    assert "Aarogya" in text
+
+    # Logout
+    at.button(key="vs_logout").click().run()
+    assert at.session_state["vs_auth_user_id"] is None
+
+    # Login again as Aarav
+    login_at(at, "aarav")
+    at.button(key="vs_nav_insurance").click().run()
+    text = visible_text(at)
+    assert "Aarogya" in text
+
+    # Links preserved (seeded link)
+    at.radio(key="vs_insurance_section").set_value("nominee").run()
+    text = visible_text(at)
+    assert "Sharing links you created" in text
+    assert "Insurer nomination not verified" in text
+
+
+# ===== Phase 2 Update: Nominee 360 tests =====
+
+def test_nominee_consistency_name_normalisation() -> None:
+    """Test name normalisation for comparison."""
+    from src.nominee_consistency import normalise_name_for_comparison, name_similarity
+
+    assert normalise_name_for_comparison("MEERA R SHARMA") == "meera r sharma"
+    assert normalise_name_for_comparison("Meera Sharma") == "meera sharma"
+    assert normalise_name_for_comparison("  MEERA  SHARMA  ") == "meera sharma"
+    # Similarity should be high for variations
+    score = name_similarity("MEERA R SHARMA", "Meera Sharma")
+    assert score >= 0.9
+
+
+def test_nominee_consistency_dob_parsing() -> None:
+    """Test DOB parsing and age calculation."""
+    from src.nominee_consistency import parse_dob, calculate_age
+    from datetime import date
+
+    assert parse_dob("1991-04-12") == date(1991, 4, 12)
+    assert parse_dob("12-04-1991") == date(1991, 4, 12)
+    assert parse_dob("12/04/1991") == date(1991, 4, 12)
+    assert parse_dob("12.04.1991") == date(1991, 4, 12)
+    assert parse_dob("invalid") is None
+
+    # Age calculation
+    dob = date(1991, 4, 12)
+    event = date(2026, 10, 1)
+    assert calculate_age(dob, event) == 35
+
+
+def test_nominee_consistency_minor_flag_life_policy() -> None:
+    """Test minor nominee flag on life policy with missing appointee."""
+    from src.nominee_consistency import check_minor_nominee
+    from datetime import date
+
+    # Minor at event date, no appointee -> review flag
+    code = check_minor_nominee("2012-03-04", date(2026, 10, 1), "life", None, None)
+    assert code == "MINOR_NOMINEE_APPOINTEE_REVIEW"
+
+    # Minor but appointee present -> unverified
+    code = check_minor_nominee("2012-03-04", date(2026, 10, 1), "life", "Guardian Name", "Father")
+    assert code == "APPOINTEE_DETAILS_UNVERIFIED"
+
+    # Adult -> no flag
+    code = check_minor_nominee("1991-04-12", date(2026, 10, 1), "life", None, None)
+    assert code is None
+
+    # Non-life product -> product rule confirmation required
+    code = check_minor_nominee("2012-03-04", date(2026, 10, 1), "health", None, None)
+    assert code == "PRODUCT_RULE_CONFIRMATION_REQUIRED"
+
+
+def test_nominee_consistency_analyse_portfolio() -> None:
+    """Test full portfolio analysis for Aarav's policies."""
+    from src.nominee_consistency import analyse_portfolio, load_linked_profiles
+    from datetime import date
+
+    profiles = load_linked_profiles()
+    # Load seeded nominee links
+    from src.mock_paytm_data import seeded_nominee_links_as_dicts
+    links = seeded_nominee_links_as_dicts()
+
+    findings, summary = analyse_portfolio(
+        owner_demo_user_id="paytm.demo.aarav",
+        event_date=date(2026, 10, 1),
+        linked_profiles=profiles,
+        nominee_links=links,
+    )
+
+    assert summary["total_policies"] == 3
+    assert summary["total_findings"] >= 3  # At least insurer registration flags
+    # Check insurer registration flags exist
+    reg_findings = [f for f in findings if f.finding_code == "INSURER_REGISTRATION_NOT_CONFIRMED"]
+    assert len(reg_findings) == 3
+
+
+def test_nominee_360_ui_loads() -> None:
+    """Test Nominee 360 page loads without errors."""
+    at = AppTest.from_file(APP_PATH, default_timeout=30).run()
+    login_at(at, "aarav")
+    at.button(key="vs_nav_nominee360").click().run()
+    assert not at.exception
+    assert at.button(key="vs_nom360_analyse")
+
+
+def test_nominee_360_analysis_runs() -> None:
+    """Test Nominee 360 analysis produces findings."""
+    at = AppTest.from_file(APP_PATH, default_timeout=30).run()
+    login_at(at, "aarav")
+    at.button(key="vs_nav_nominee360").click().run()
+    at.button(key="vs_nom360_analyse").click().run()
+    assert not at.exception
+    assert "vs_nom360_findings" in at.session_state
+    findings = at.session_state["vs_nom360_findings"]
+    assert len(findings) >= 3
+    summary = at.session_state["vs_nom360_summary"]
+    assert summary["total_policies"] == 3
+
+
+# ===== Phase 2 Update: Chatbot tests =====
+
+def test_chatbot_ui_loads() -> None:
+    """Test AI Assistant chatbot page loads."""
+    at = AppTest.from_file(APP_PATH, default_timeout=30).run()
+    login_at(at, "aarav")
+    at.button(key="vs_nav_chatbot").click().run()
+    assert not at.exception
+    # Check for chat input
+    assert has_widget(at, "chat_input", "vs_chatbot_input") or has_widget(at, "text_input", "vs_chatbot_input")
+
+
+def test_chatbot_context_builds() -> None:
+    """Test chatbot context builds policy and finding info."""
+    from src.chatbot_ui import _build_policy_context
+    from datetime import date
+
+    # Test with Aarav's user ID
+    policy_details, policy_count, finding_count, finding_summary = _build_policy_context("paytm.demo.aarav")
+    assert policy_count == 3
+    assert "Aarogya" in policy_details
+    assert "Jeevan" in policy_details
+    assert "Drive" in policy_details
+
+
+def test_chatbot_nemotron_call_structure() -> None:
+    """Test Nemotron call uses correct model and endpoint."""
+    import os
+    assert os.environ.get("LLM_105B_MODEL") == "nvidia/nemotron-3-ultra-550b-a55b"
+    assert os.environ.get("LLM_105B_BASE_URL") == "https://openrouter.ai/api/v1"

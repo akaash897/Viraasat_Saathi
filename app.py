@@ -44,11 +44,10 @@ from src.fixtures import (  # noqa: E402
     load_source_registry,
 )
 from src.insurance_ui import render_active_insurances  # noqa: E402
+from src.mock_auth import authenticate, login_id_for_user, preset_accounts  # noqa: E402
+from src.mock_paytm_data import demo_user_by_id  # noqa: E402
 from src.models import DemoClaim, Language  # noqa: E402
-from src.safety import (  # noqa: E402
-    format_inr,
-    reset_session_state,
-)
+from src.safety import format_inr  # noqa: E402
 from src.sarvam_service import (  # noqa: E402
     ALLOWED_MISSING_CATEGORIES,
     FIXED_SOURCE_EXCERPTS,
@@ -77,6 +76,8 @@ st.set_page_config(
 DEFAULT_SESSION = {
     "vs_page": "home",
     "vs_language_choice": "en",
+    "vs_auth_user_id": None,
+    "vs_login_error": "",
     "vs_claim_loaded": False,
     "vs_family_loaded": False,
     "vs_family_mode": "demo",
@@ -116,6 +117,50 @@ def init_session() -> None:
     for key, value in DEFAULT_SESSION.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+
+def current_auth_user() -> dict[str, object] | None:
+    """Return the signed-in fixture user, or ``None`` when logged out."""
+    user_id = st.session_state.get("vs_auth_user_id")
+    if not user_id:
+        return None
+    user = demo_user_by_id(str(user_id))
+    if user is None:
+        st.session_state["vs_auth_user_id"] = None
+    return user
+
+
+def login_account(demo_user_id: str) -> None:
+    """Start a local fixture session for one seeded user."""
+    st.session_state["vs_auth_user_id"] = demo_user_id
+    st.session_state["vs_insurance_active_user_id"] = demo_user_id
+    st.session_state["vs_insurance_nominee_policy_id"] = None
+    st.session_state["vs_insurance_review_policy_id"] = None
+    st.session_state["vs_page"] = "home"
+    st.session_state["vs_login_error"] = ""
+    st.session_state.pop("vs_login_password", None)
+
+
+def logout_account() -> None:
+    """End the local session without deleting session policy records."""
+    st.session_state["vs_auth_user_id"] = None
+    st.session_state["vs_insurance_active_user_id"] = None
+    st.session_state["vs_insurance_nominee_policy_id"] = None
+    st.session_state["vs_insurance_review_policy_id"] = None
+    st.session_state["vs_page"] = "home"
+    st.session_state["vs_login_error"] = ""
+    st.session_state.pop("vs_login_password", None)
+
+
+def try_login(login_id: object, password: object) -> bool:
+    demo_user_id = authenticate(login_id, password)
+    if demo_user_id is None:
+        st.session_state["vs_login_error"] = (
+            "That login ID or password does not match a preset account."
+        )
+        return False
+    login_account(demo_user_id)
+    return True
 
 
 def _drop_prefixes(prefixes: tuple[str, ...]) -> None:
@@ -320,6 +365,60 @@ def render_css() -> None:
         .vs-pill-paytm { background: #E6F0FF; color: #0B3B8C; }
         .vs-pill-review { background: #FFF1D6; color: #7A5200; }
         .vs-pill-shared { background: #E6F7EE; color: #0B6B3A; }
+        .vs-profile-card {
+            display: flex; align-items: center; gap: 10px;
+            background: #F3F8FF; border: 1px solid #C9DDF7;
+            border-radius: 18px; padding: 8px 12px;
+        }
+        .vs-profile-avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #00BAF2, #0B3B8C);
+            color: #fff; font-weight: 800; font-size: .86rem;
+            letter-spacing: .02em; flex: 0 0 auto;
+        }
+        .vs-profile-name {
+            color: #0B3B8C; font-weight: 800; font-size: .92rem;
+            line-height: 1.1;
+        }
+        .vs-profile-id {
+            color: #5B6B7A; font-size: .72rem; margin-top: 2px;
+        }
+        .vs-login-hero {
+            background: linear-gradient(145deg, #002970 0%, #0B4FA8 55%, #00BAF2 100%);
+            border-radius: 26px; padding: 42px 38px; color: #fff;
+            min-height: 420px; box-shadow: 0 20px 45px rgba(0,41,112,.18);
+        }
+        .vs-login-hero h1 {
+            color: #fff; font-size: 2.2rem; line-height: 1.12;
+            letter-spacing: -0.04em; margin: 18px 0 14px;
+        }
+        .vs-login-hero p { color: #DCEBFF; font-size: 1rem; line-height: 1.6; }
+        .vs-login-hero ul {
+            margin: 22px 0 0; padding-left: 18px; color: #EAF4FF;
+            line-height: 1.9; font-size: .92rem;
+        }
+        .vs-login-badge {
+            display: inline-block; background: rgba(255,255,255,.16);
+            border: 1px solid rgba(255,255,255,.28); border-radius: 999px;
+            padding: 6px 12px; font-size: .7rem; font-weight: 800;
+            letter-spacing: .12em; text-transform: uppercase;
+        }
+        .vs-login-brand { font-size: 1.15rem; font-weight: 800; letter-spacing: .01em; }
+        .vs-login-title {
+            color: #002970; font-size: 1.55rem; font-weight: 800;
+            letter-spacing: -0.03em; margin-bottom: 4px;
+        }
+        .vs-login-copy { color: #5B6B7A; font-size: .9rem; margin-bottom: 14px; }
+        .vs-login-footer {
+            color: #5B6B7A; font-size: .78rem; line-height: 1.55;
+            margin-top: 18px; text-align: center;
+        }
+        .vs-account-line {
+            background: #F3F8FF; border: 1px solid #D8E6FA;
+            border-radius: 12px; padding: 10px 12px; margin: 8px 0;
+        }
+        .vs-account-line strong { color: #002970; }
         @media (max-width: 760px) {
             .block-container { padding-left: 1rem; padding-right: 1rem; }
             .vs-title { font-size: 1.3rem; }
@@ -332,10 +431,34 @@ def render_css() -> None:
     )
 
 
+def render_profile(user: dict[str, object]) -> None:
+    demo_user_id = str(user.get("demo_user_id", ""))
+    login_id = login_id_for_user(demo_user_id) or "account"
+    st.markdown(
+        f"""
+        <div class="vs-profile-card">
+          <div class="vs-profile-avatar">{esc(user.get('initials', 'VS'))}</div>
+          <div>
+            <div class="vs-profile-name">{esc(user.get('display_name', 'Signed in'))}</div>
+            <div class="vs-profile-id">@{esc(login_id)}</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button(
+        "Log out",
+        key="vs_logout",
+        width="stretch",
+    ):
+        logout_account()
+        st.rerun()
+
+
 def render_header() -> Language:
     init_session()
-    language: Language = st.session_state["vs_language_choice"]  # type: ignore[assignment]
-    left, middle, right = st.columns([0.58, 0.24, 0.18])
+    language: Language = st.session_state.get("vs_language_choice", "en")  # type: ignore[assignment]
+    left, right = st.columns([0.72, 0.28])
     with left:
         st.markdown(
             f"""
@@ -354,25 +477,96 @@ def render_header() -> Language:
             """,
             unsafe_allow_html=True,
         )
-    with middle:
-        st.radio(
-            t("language_label", language),
-            options=["en", "hi"],
-            format_func=lambda value: "English" if value == "en" else "हिन्दी",
-            horizontal=True,
-            key="vs_language_choice",
-            label_visibility="collapsed",
+    with right:
+        user = current_auth_user()
+        if user is not None:
+            render_profile(user)
+    return "en"
+
+
+def render_login() -> None:
+    """Render the local, preset-credential sign-in screen."""
+    init_session()
+    left, right = st.columns([1.15, 1], gap="large")
+    with left:
+        st.markdown(
+            """
+            <div class="vs-login-hero">
+              <div class="vs-login-brand">Virasat Saathi</div>
+              <div class="vs-login-badge">Paytm-style experience</div>
+              <h1>All your insurance,<br/>in one calm place.</h1>
+              <p>
+                Sign in to see the policies linked to your account, open policy
+                documents, upload an external policy for extraction, and manage
+                family-sharing requests.
+              </p>
+              <ul>
+                <li>Policies bought on Paytm in one inventory</li>
+                <li>Document viewer for every policy</li>
+                <li>Explicitly consented nominee summaries</li>
+              </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
     with right:
-        st.button(
-            t("reset_demo", language),
-            key="vs_reset",
-            on_click=reset_session_state,
-            args=(st.session_state,),
-            help=t("reset_help", language),
-            width="stretch",
-        )
-    return st.session_state["vs_language_choice"]  # type: ignore[return-value]
+        with st.container(border=True):
+            st.markdown(
+                '<div class="vs-login-title">Log in</div>'
+                '<div class="vs-login-copy">Use one of the preset prototype accounts.</div>',
+                unsafe_allow_html=True,
+            )
+            login_id = st.text_input(
+                "Login ID",
+                key="vs_login_id",
+                placeholder="aarav",
+            )
+            password = st.text_input(
+                "Password",
+                type="password",
+                key="vs_login_password",
+                placeholder="Enter preset password",
+            )
+            if st.button(
+                "Log in",
+                key="vs_login_submit",
+                type="primary",
+                width="stretch",
+            ):
+                if try_login(login_id, password):
+                    st.rerun()
+            error = str(st.session_state.get("vs_login_error", ""))
+            if error:
+                st.error(error)
+            st.caption(
+                "Prototype sign-in only. Accounts are local fixtures; this is not "
+                "Paytm authentication. No OTP, UPI PIN or real credential is used."
+            )
+
+        with st.expander("Preview access details"):
+            for account in preset_accounts():
+                st.markdown(
+                    f"""
+                    <div class="vs-account-line">
+                      <strong>{esc(account['display_name'])}</strong><br/>
+                      Login ID: <code>{esc(account['login_id'])}</code> ·
+                      Password: <code>{esc(account['password'])}</code>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            st.caption(
+                "These are deliberate local test credentials for the independent "
+                "prototype, not Paytm or insurer credentials."
+            )
+
+    st.markdown(
+        '<div class="vs-login-footer">'
+        "Independent hackathon prototype. Not affiliated with Paytm, any insurer "
+        "or Sarvam AI. Use synthetic records only."
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def render_privacy_banner(language: Language) -> None:
@@ -464,9 +658,9 @@ def render_home(language: Language) -> None:
         "Journey 03 · Insurance inventory",
         "Active Insurances",
         (
-            "See demo policies, upload an external policy for Sarvam Document AI "
-            "extraction, and demonstrate an explicitly consented nominee summary "
-            "inside a Paytm-style demo."
+            "See your policies, upload an external policy for Sarvam Document AI "
+            "extraction, open the policy document, and manage explicitly shared "
+            "nominee summaries."
         ),
         "🧾",
     )
@@ -1281,6 +1475,11 @@ def render_footer(language: Language) -> None:
 def main() -> None:
     render_css()
     init_session()
+    user = current_auth_user()
+    if user is None:
+        render_login()
+        return
+    st.session_state["vs_insurance_active_user_id"] = str(user["demo_user_id"])
     language = render_header()
     render_privacy_banner(language)
     render_top_nav(language)

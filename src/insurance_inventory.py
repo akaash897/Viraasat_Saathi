@@ -15,23 +15,23 @@ from src.mock_paytm_data import paytm_policies_as_dicts
 
 NOT_FOUND = "Not found in document"
 SOURCE_LABELS: dict[str, str] = {
-    "PAYTM_DEMO": "Bought on Paytm — DEMO",
+    "PAYTM_DEMO": "Bought on Paytm",
     "EXTERNAL_DOCUMENT": "External document — OCR output",
-    "NOMINEE_SHARED": "Nominee-linked limited summary — DEMO",
+    "NOMINEE_SHARED": "Nominee-linked summary",
 }
 VERIFICATION_LABELS: dict[str, str] = {
-    "SIMULATED_NOT_VERIFIED": "Demo record — not verified with insurer",
+    "SIMULATED_NOT_VERIFIED": "Not verified with insurer",
     "OCR_EXTRACTED_NEEDS_REVIEW": "OCR extracted — needs review",
     "USER_REVIEWED_UNVERIFIED": "User reviewed — insurer status not verified",
 }
 NOMINEE_LEGAL_WORDING = (
-    "This creates a simulated Paytm-ID family link inside the hackathon "
+    "This creates a family-sharing link inside the independent hackathon "
     "prototype. It does not register, change or confirm a legal nominee with "
     "the insurer. To make or change a legally effective nomination, use the "
     "insurer's official process and obtain its acknowledgement."
 )
 PROTOTYPE_LABEL = (
-    "Independent hackathon prototype · Paytm-style demo · "
+    "Independent hackathon prototype · Paytm-style experience · "
     "No live Paytm connection"
 )
 INSURANCE_SESSION_PREFIX = "vs_insurance_"
@@ -131,7 +131,7 @@ def derive_display_status(
     """Derive a cautious hint; never infer that an insurer has it active."""
     source_type = str(record.get("source_type", ""))
     if source_type == "PAYTM_DEMO":
-        return "Demo record — not verified with insurer"
+        return "Policy record — not verified with insurer"
 
     if source_type == "NOMINEE_SHARED":
         return "Limited summary shared by owner; insurer status not checked"
@@ -277,12 +277,12 @@ def nominee_status_label(link: Mapping[str, Any]) -> str:
     acceptance = str(link.get("nominee_acceptance_status", ""))
     demo_status = str(link.get("demo_link_status", ""))
     if acceptance == "DECLINED":
-        return "Demo link declined — insurer nomination not verified"
+        return "Invitation declined — insurer nomination not verified"
     if demo_status == "REVOKED":
-        return "Demo link revoked — insurer nomination not verified"
+        return "Sharing link revoked — insurer nomination not verified"
     if acceptance == "PENDING":
-        return "Awaiting demo acceptance — insurer nomination not verified"
-    return "Demo link accepted — insurer nomination not verified"
+        return "Awaiting acceptance — insurer nomination not verified"
+    return "Sharing link accepted — insurer nomination not verified"
 
 
 def limited_shared_summary(
@@ -328,6 +328,8 @@ def ensure_insurance_session(
         state["vs_insurance_links"] = copy.deepcopy(list(seed_links))
     if "vs_insurance_external_policies" not in state:
         state["vs_insurance_external_policies"] = []
+    if "vs_insurance_documents" not in state:
+        state["vs_insurance_documents"] = {}
     if "vs_insurance_upload_nonce" not in state:
         state["vs_insurance_upload_nonce"] = 0
 
@@ -381,11 +383,14 @@ def remove_external_policy_session(
             for link in state.get("vs_insurance_links", [])
             if link.get("policy_id") != policy_id
         ]
+        documents = state.get("vs_insurance_documents")
+        if isinstance(documents, MutableMapping):
+            documents.pop(policy_id, None)
     return removed
 
 
 def source_label(source_type: object) -> str:
-    return SOURCE_LABELS.get(str(source_type), "Source not verified — DEMO")
+    return SOURCE_LABELS.get(str(source_type), "Source not confirmed")
 
 
 def verification_label(status: object) -> str:

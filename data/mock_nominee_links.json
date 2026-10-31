@@ -6,7 +6,7 @@
       "owner_demo_user_id": "paytm.demo.aarav",
       "nominee_demo_user_id": "paytm.demo.meera",
       "relationship": "spouse",
-      "note": "Seeded completed demo link for the hackathon walkthrough.",
+      "note": "Seeded completed family-sharing link for the hackathon walkthrough.",
       "owner_authorised_summary_sharing": true,
       "nominee_acceptance_status": "ACCEPTED",
       "demo_link_status": "ACTIVE",

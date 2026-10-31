@@ -14,10 +14,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "app_title": "Virasat Saathi",
         "app_tagline": "Financial guidance when you need it. Support when it matters most.",
         "independent": "Independent hackathon prototype",
-        "prototype_label": "Independent hackathon prototype · Demo data",
-        "demo_data_label": "DEMO DATA",
+        "prototype_label": "Independent hackathon prototype · Synthetic data",
+        "demo_data_label": "SYNTHETIC DATA",
         "privacy_banner": (
-            "Hackathon prototype — use the fictional demo case. Do not upload real medical, "
+            "Independent hackathon prototype — use synthetic records only. Do not upload real medical, "
             "insurance, banking or deceased-person records."
         ),
         "language_label": "Language",
@@ -25,7 +25,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "reset_help": "Clears this session and returns to the synthetic demo case.",
         "home_heading": "What would you like help with?",
         "home_sub": (
-            "Two calm, evidence-first journeys. The prototype explains and prepares; "
+            "Three calm, evidence-first journeys. The prototype explains and prepares; "
             "it does not decide coverage, ownership or claim approval."
         ),
         "claims_card_title": "Claims Companion",

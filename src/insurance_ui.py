@@ -29,11 +29,11 @@ from src.insurance_inventory import (
     owner_links_for_user,
     paytm_policies_for_user,
     remove_external_policy_session,
-    reset_insurance_session,
     seeded_paytm_records,
     source_label,
     verification_label,
 )
+from src.mock_auth import login_id_for_user
 from src.mock_paytm_data import (
     demo_user_by_id,
     seeded_nominee_links_as_dicts,
@@ -50,6 +50,11 @@ from src.nominee_demo import (
     replace_link,
     respond_to_nominee_link,
     revoke_nominee_link,
+)
+from src.policy_documents import (
+    document_filename,
+    generate_policy_document,
+    is_pdf,
 )
 from src.policy_normalizer import (
     build_external_policy,
@@ -73,10 +78,6 @@ UPLOAD_DISCLOSURE = (
     "AI for extraction. Do not upload a document unless you are authorised to "
     "share it. Review the provider's applicable data handling terms before "
     "using real customer documents."
-)
-PAYTM_SESSION_NOTE = (
-    "Simulated session only. No login, OTP, UPI PIN, password or real Paytm "
-    "credentials are collected, and no Paytm API is called."
 )
 SECTION_LABELS = {
     "bought": "Bought on Paytm",
@@ -106,16 +107,20 @@ def info_box(text: str) -> str:
 
 
 def _active_user(users: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-    active_id = str(st.session_state.get("vs_insurance_active_user_id", ""))
+    active_id = str(
+        st.session_state.get("vs_auth_user_id")
+        or st.session_state.get("vs_insurance_active_user_id", "")
+    )
     user = find_demo_user(users, active_id)
     if user is None:
         user = dict(users[0])
-        st.session_state["vs_insurance_active_user_id"] = user["demo_user_id"]
+    st.session_state["vs_insurance_active_user_id"] = user["demo_user_id"]
     return user
 
 
 def _user_label(user: Mapping[str, Any]) -> str:
-    return f"{user.get('display_name', 'Demo user')} · {user.get('demo_user_id', '')}"
+    login_id = login_id_for_user(user.get("demo_user_id")) or "account"
+    return f"{user.get('display_name', 'Account')} · @{login_id}"
 
 
 def _set_notice(kind: str, text: str) -> None:
@@ -140,26 +145,6 @@ def _render_notice() -> None:
         st.info(text)
 
 
-def _on_user_change() -> None:
-    st.session_state["vs_insurance_nominee_policy_id"] = None
-    st.session_state["vs_insurance_review_policy_id"] = None
-    st.session_state.pop("vs_insurance_notice", None)
-
-
-def _reset_demo_callback() -> None:
-    users = users_as_dicts()
-    reset_insurance_session(
-        st.session_state, users, seeded_nominee_links_as_dicts()
-    )
-    st.session_state["vs_insurance_notice"] = {
-        "kind": "success",
-        "text": (
-            "Insurance demo reset. Seeded demo policies and the seeded nominee "
-            "link are restored; session-created external records were removed."
-        ),
-    }
-
-
 def _fact_grid(pairs: Sequence[tuple[str, object]]) -> None:
     cells = "".join(
         (
@@ -176,34 +161,55 @@ def _product_label(value: object) -> str:
     return text.replace("_", " ").title()
 
 
-def _render_session_card(user: Mapping[str, Any], users: Sequence[Mapping[str, Any]]) -> None:
-    st.markdown("#### Demo Paytm session")
-    st.caption(PAYTM_SESSION_NOTE)
-    user_ids = [str(item["demo_user_id"]) for item in users]
-    st.selectbox(
-        "Switch demo Paytm user",
-        options=user_ids,
-        format_func=lambda value: _user_label(
-            find_demo_user(users, value) or {"display_name": value, "demo_user_id": value}
-        ),
-        key="vs_insurance_active_user_id",
-        on_change=_on_user_change,
+def _document_entry(record: Mapping[str, Any]) -> dict[str, Any]:
+    policy_id = str(record.get("policy_id", ""))
+    stored = st.session_state.get("vs_insurance_documents", {})
+    if isinstance(stored, Mapping):
+        entry = stored.get(policy_id)
+        if isinstance(entry, Mapping) and entry.get("data"):
+            return dict(entry)
+    return {
+        "data": generate_policy_document(record),
+        "mime_type": "application/pdf",
+        "name": document_filename(record),
+    }
+
+
+def _render_policy_document(record: Mapping[str, Any]) -> None:
+    policy_id = str(record.get("policy_id", "policy"))
+    entry = _document_entry(record)
+    data = bytes(entry.get("data", b""))
+    mime_type = str(entry.get("mime_type", "application/pdf"))
+    filename = str(entry.get("name") or document_filename(record))
+
+    st.markdown("#### Policy document")
+    if not data:
+        st.info("The policy document is not available in this session.")
+        return
+
+    if is_pdf(data):
+        try:
+            st.pdf(data, height=520, key=f"vs_pdf_{policy_id}")
+        except Exception:
+            st.warning(
+                "Inline PDF preview is unavailable in this environment. "
+                "Use the download button below."
+            )
+    elif mime_type.startswith("image/"):
+        st.image(data, caption=filename)
+    else:
+        st.info("This document type cannot be previewed here.")
+
+    st.download_button(
+        "Download policy document",
+        data=data,
+        file_name=filename,
+        mime=mime_type,
+        key=f"vs_download_policy_doc_{policy_id}",
     )
-    st.markdown(
-        f"""
-        <div class="vs-session-card">
-          <div class="vs-session-avatar">{esc(user.get('initials', 'D'))}</div>
-          <div>
-            <div class="vs-session-name">{esc(user.get('display_name', 'Demo user'))}</div>
-            <div class="vs-mono">{esc(user.get('demo_user_id', ''))}</div>
-            <div style="margin-top:6px;">
-              {pill('DEMO SESSION', 'vs-pill-paytm')}
-              {pill('No real authentication', 'vs-pill-neutral')}
-            </div>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.caption(
+        "Previewed from this browser session only. Uploaded policy files are "
+        "held in memory and are not written to disk."
     )
 
 
@@ -224,7 +230,7 @@ def _render_link_status(link: Mapping[str, Any]) -> None:
     st.markdown(
         pill(nominee_status_label(link), "vs-pill-review")
         + " "
-        + pill("DEMO LINK", "vs-pill-demo"),
+        + pill("SHARING LINK", "vs-pill-paytm"),
         unsafe_allow_html=True,
     )
     owner = demo_user_by_id(str(link.get("owner_demo_user_id", "")))
@@ -235,16 +241,16 @@ def _render_link_status(link: Mapping[str, Any]) -> None:
         else "Limited summary sharing off"
     )
     st.caption(
-        f"Owner: {owner.get('display_name') if owner else 'Demo owner'} · "
-        f"Nominee: {nominee.get('display_name') if nominee else 'Demo nominee'} · "
+        f"Owner: {owner.get('display_name') if owner else 'Owner'} · "
+        f"Nominee: {nominee.get('display_name') if nominee else 'Nominee'} · "
         f"Relationship: {relationship_label(link.get('relationship'))} · {sharing}"
     )
-    st.caption("Insurer nomination not verified. This demo link is not a legal nomination.")
+    st.caption("Insurer nomination not verified. This sharing link is not a legal nomination.")
 
 
 def _link_rows(link: Mapping[str, Any]) -> list[tuple[str, object]]:
     return [
-        ("Demo link ID", link.get("link_id")),
+        ("Link ID", link.get("link_id")),
         ("Relationship", relationship_label(link.get("relationship"))),
         ("Summary sharing", "Allowed" if link.get("owner_authorised_summary_sharing") else "Off"),
         ("Note", link.get("note")),
@@ -269,7 +275,7 @@ def _render_nominee_panel(
         action, cancel = st.columns(2)
         with action:
             if st.button(
-                "Revoke demo sharing link",
+                "Revoke sharing link",
                 key=f"vs_revoke_link_{existing.get('link_id')}",
                 width="stretch",
             ):
@@ -283,7 +289,7 @@ def _render_nominee_panel(
                     )
                     _set_notice(
                         "success",
-                        "Demo sharing link revoked. This does not cancel an insurer "
+                        "Sharing link revoked. This does not cancel an insurer "
                         "nomination.",
                     )
                     st.session_state["vs_insurance_nominee_policy_id"] = None
@@ -299,7 +305,7 @@ def _render_nominee_panel(
                 st.session_state["vs_insurance_nominee_policy_id"] = None
                 st.rerun()
         st.caption(
-            "Revoking removes the limited summary from the nominee's demo view; "
+            "Revoking removes the limited summary from the nominee's view; "
             "it is not an insurer nomination cancellation."
         )
         return
@@ -310,29 +316,29 @@ def _render_nominee_panel(
         if user.get("demo_user_id") != owner.get("demo_user_id")
     ]
     if not candidates:
-        st.info("There is no other seeded demo user to select as a nominee.")
+        st.info("There is no other prototype account to select as a nominee.")
         return
     candidate_ids = [str(user["demo_user_id"]) for user in candidates]
     selected_id = st.selectbox(
-        "Nominee demo Paytm ID",
+        "Nominee account",
         options=candidate_ids,
         format_func=lambda value: _user_label(
             find_demo_user(users, value) or {"display_name": value, "demo_user_id": value}
         ),
         key=f"vs_nominee_user_{policy_id}",
-        help="Only seeded mock Paytm IDs are searched. No Paytm lookup is made.",
+        help="Only local prototype accounts are searched. No Paytm lookup is made.",
     )
     matched = find_demo_user(users, selected_id)
     if matched is not None:
         st.markdown(
-            pill("Demo nominee selected", "vs-pill-paytm")
+            pill("Nominee selected", "vs-pill-paytm")
             + " "
-            + pill("Seeded mock directory only", "vs-pill-demo"),
+            + pill("Local account directory", "vs-pill-neutral"),
             unsafe_allow_html=True,
         )
         st.caption(
-            f"Matched fictional profile: {matched.get('display_name')} · "
-            f"{matched.get('demo_user_id')}"
+            f"Matched profile: {matched.get('display_name')} · "
+            f"@{login_id_for_user(matched.get('demo_user_id')) or 'account'}"
         )
     relationship = st.selectbox(
         "Relationship",
@@ -341,19 +347,18 @@ def _render_nominee_panel(
         key=f"vs_nominee_relationship_{policy_id}",
     )
     note = st.text_area(
-        "Optional note (stored in this demo session only)",
+        "Optional note (stored in this session only)",
         key=f"vs_nominee_note_{policy_id}",
         max_chars=300,
         height=80,
     )
     owner_confirmed = st.checkbox(
-        "I confirm I am the policyholder and I want to create this simulated "
-        "Paytm-ID nominee link.",
+        "I confirm I am the policyholder and I want to create this family-sharing link.",
         value=False,
         key=f"vs_nominee_consent_{policy_id}",
     )
     share_summary = st.checkbox(
-        "Allow this demo nominee to see a limited policy summary after they accept.",
+        "Allow this nominee to see a limited policy summary after they accept.",
         value=False,
         key=f"vs_nominee_share_{policy_id}",
         help=(
@@ -363,13 +368,13 @@ def _render_nominee_panel(
         ),
     )
     st.caption(
-        "Creating the demo link does not give the nominee access by itself. The "
+        "Creating the link does not give the nominee access by itself. The "
         "nominee must accept, and the separate sharing checkbox must be on."
     )
     submit, cancel = st.columns(2)
     with submit:
         create_clicked = st.button(
-            "Create simulated nominee link",
+            "Create sharing link",
             key=f"vs_create_nominee_{policy_id}",
             type="primary",
             disabled=not owner_confirmed,
@@ -424,64 +429,70 @@ def _render_policy_card(
             pill(source_label(record.get("source_type")), "vs-pill-paytm")
             + " "
             + pill(verification_label(record.get("verification_status")), "vs-pill-review")
-            + (" " + pill(extra_badge, "vs-pill-demo") if extra_badge else ""),
+            + (" " + pill(extra_badge, "vs-pill-info") if extra_badge else ""),
             unsafe_allow_html=True,
         )
         st.markdown(f"**{esc(display_value(record.get('product_name')))}**")
-        _fact_grid(
-            [
-                ("Insurance type", _product_label(record.get("product_type"))),
-                ("Policy number (masked)", record.get("policy_number_masked")),
-                (
-                    "Policy period",
-                    f"{display_date(record.get('policy_start_date'))} – "
-                    f"{display_date(record.get('policy_end_date'))}",
-                ),
-                ("Sum insured / coverage", record.get("sum_insured")),
-                ("Premium", record.get("premium_amount")),
-                ("Premium frequency", record.get("premium_frequency")),
-            ]
-        )
-        st.caption(f"Source: {source_label(record.get('source_type'))}")
-        st.caption(f"Status: {verification_label(record.get('verification_status'))}")
-        st.caption(str(record.get("display_status", "")))
 
-        existing = active_nominee_link_for_policy(links, policy_id)
-        if existing is not None:
-            st.markdown(
-                pill(nominee_status_label(existing), "vs-pill-review"),
-                unsafe_allow_html=True,
+        summary_tab, document_tab = st.tabs(["Summary", "Policy document"])
+        with summary_tab:
+            _fact_grid(
+                [
+                    ("Insurance type", _product_label(record.get("product_type"))),
+                    ("Policy number (masked)", record.get("policy_number_masked")),
+                    (
+                        "Policy period",
+                        f"{display_date(record.get('policy_start_date'))} – "
+                        f"{display_date(record.get('policy_end_date'))}",
+                    ),
+                    ("Sum insured / coverage", record.get("sum_insured")),
+                    ("Premium", record.get("premium_amount")),
+                    ("Premium frequency", record.get("premium_frequency")),
+                ]
             )
+            st.caption(f"Source: {source_label(record.get('source_type'))}")
+            st.caption(f"Status: {verification_label(record.get('verification_status'))}")
+            st.caption(str(record.get("display_status", "")))
 
-        detail_col, action_col = st.columns([0.62, 0.38])
-        with detail_col:
-            with st.expander("View details"):
-                _fact_grid(_policy_detail_rows(record))
-                st.caption(
-                    "The full policy number is not shown in this summary. All values "
-                    "are demo data or OCR output and are not insurer-verified."
+            existing = active_nominee_link_for_policy(links, policy_id)
+            if existing is not None:
+                st.markdown(
+                    pill(nominee_status_label(existing), "vs-pill-review"),
+                    unsafe_allow_html=True,
                 )
-        with action_col:
-            if can_manage_nominee(record):
-                label = "Manage nominee" if existing is None else "View nominee link"
-                if st.button(
-                    label,
-                    key=f"vs_manage_nominee_{policy_id}",
-                    width="stretch",
-                ):
-                    st.session_state["vs_insurance_nominee_policy_id"] = policy_id
-                    st.rerun()
-            else:
-                st.caption("Review and confirm this policy before adding a nominee.")
 
-        if st.session_state.get("vs_insurance_nominee_policy_id") == policy_id:
-            st.divider()
-            _render_nominee_panel(
-                record,
-                users=users,
-                owner=owner,
-                links=links,
-            )
+            detail_col, action_col = st.columns([0.62, 0.38])
+            with detail_col:
+                with st.expander("View details"):
+                    _fact_grid(_policy_detail_rows(record))
+                    st.caption(
+                        "The full policy number is not shown in this summary. Values "
+                        "come from session records or OCR output and are not "
+                        "insurer-verified."
+                    )
+            with action_col:
+                if can_manage_nominee(record):
+                    label = "Manage nominee" if existing is None else "View nominee link"
+                    if st.button(
+                        label,
+                        key=f"vs_manage_nominee_{policy_id}",
+                        width="stretch",
+                    ):
+                        st.session_state["vs_insurance_nominee_policy_id"] = policy_id
+                        st.rerun()
+                else:
+                    st.caption("Review and confirm this policy before adding a nominee.")
+
+            if st.session_state.get("vs_insurance_nominee_policy_id") == policy_id:
+                st.divider()
+                _render_nominee_panel(
+                    record,
+                    users=users,
+                    owner=owner,
+                    links=links,
+                )
+        with document_tab:
+            _render_policy_document(record)
 
 
 def _render_bought(
@@ -492,17 +503,17 @@ def _render_bought(
 ) -> None:
     st.markdown("### Bought on Paytm")
     st.caption(
-        "Seeded fictional policies attached to the currently selected demo user. "
-        "No Paytm API is called and no real policy is shown."
+        "Policies linked to your account. No Paytm API is called and no live "
+        "policy is fetched."
     )
     policies = paytm_policies_for_user(seeded_paytm_records(), str(owner["demo_user_id"]))
     if not policies:
-        st.info("This demo user has no seeded Bought on Paytm policies.")
+        st.info("No Bought on Paytm policies are linked to this account.")
         return
     st.markdown(
-        pill(f"{len(policies)} demo policies", "vs-pill-paytm")
+        pill(f"{len(policies)} policies", "vs-pill-paytm")
         + " "
-        + pill("SIMULATED_NOT_VERIFIED", "vs-pill-review"),
+        + pill(verification_label("SIMULATED_NOT_VERIFIED"), "vs-pill-review"),
         unsafe_allow_html=True,
     )
     st.write("")
@@ -512,7 +523,6 @@ def _render_bought(
             users=users,
             owner=owner,
             links=links,
-            extra_badge="DEMO DATA",
         )
 
 
@@ -607,7 +617,7 @@ def _render_review_form(record: Mapping[str, Any]) -> None:
         )
         authorised = st.checkbox(
             "I confirm this document is mine, or I am authorised to add it to this "
-            "demo session.",
+            "session.",
             value=False,
             key=f"vs_review_authorised_{policy_id}",
         )
@@ -667,8 +677,8 @@ def _remove_external(policy_id: str) -> None:
         st.session_state["vs_insurance_review_policy_id"] = None
     _set_notice(
         "success",
-        "External document record removed from this session, along with any demo "
-        "nominee link attached to it.",
+        "External document record removed from this session, along with any "
+        "sharing link attached to it.",
     )
     st.rerun()
 
@@ -703,64 +713,68 @@ def _render_external_record(
             unsafe_allow_html=True,
         )
         st.markdown(
-            pill("External Insurance — DEMO OCR", "vs-pill-paytm")
+            pill("External Insurance — OCR output", "vs-pill-paytm")
             + " "
             + pill("NEEDS REVIEW", "vs-pill-review")
             + " "
-            + pill("OCR_EXTRACTED_NEEDS_REVIEW", "vs-pill-demo"),
+            + pill("OCR extracted", "vs-pill-info"),
             unsafe_allow_html=True,
         )
         st.markdown(
             f"**{esc(display_value(record.get('product_name')))}**"
         )
-        _fact_grid(
-            [
-                ("Insurance type", _product_label(record.get("product_type"))),
-                ("Policy number (masked)", record.get("policy_number_masked")),
-                (
-                    "Policy period",
-                    f"{display_date(record.get('policy_start_date'))} – "
-                    f"{display_date(record.get('policy_end_date'))}",
-                ),
-                ("Sum insured / coverage", record.get("sum_insured")),
-                ("Premium", record.get("premium_amount")),
-                ("Document", record.get("document_name")),
-            ]
-        )
-        st.caption(f"Status: {verification_label(record.get('verification_status'))}")
-        st.caption(str(record.get("display_status", "")))
-        reasons = record.get("review_reasons") or []
-        if reasons:
-            st.markdown("**Why this needs review**")
-            for reason in reasons:
-                st.caption(f"• {reason}")
-        st.markdown(warning_box(OCR_REVIEW_NOTE), unsafe_allow_html=True)
-        with st.expander("Raw extracted values (session only)"):
-            st.json(record.get("raw_extracted") or {})
-            st.caption(
-                "Kept only in this browser session for review. It is not written to "
-                "logs, a cache or the repository."
+        summary_tab, document_tab = st.tabs(["Summary", "Policy document"])
+        with summary_tab:
+            _fact_grid(
+                [
+                    ("Insurance type", _product_label(record.get("product_type"))),
+                    ("Policy number (masked)", record.get("policy_number_masked")),
+                    (
+                        "Policy period",
+                        f"{display_date(record.get('policy_start_date'))} – "
+                        f"{display_date(record.get('policy_end_date'))}",
+                    ),
+                    ("Sum insured / coverage", record.get("sum_insured")),
+                    ("Premium", record.get("premium_amount")),
+                    ("Document", record.get("document_name")),
+                ]
             )
-        action_col, remove_col = st.columns(2)
-        with action_col:
-            if st.button(
-                "Review extracted details",
-                key=f"vs_review_open_{policy_id}",
-                type="primary",
-                width="stretch",
-            ):
-                st.session_state["vs_insurance_review_policy_id"] = policy_id
-                st.rerun()
-        with remove_col:
-            if st.button(
-                "Remove document / policy from this session",
-                key=f"vs_remove_external_{policy_id}",
-                width="stretch",
-            ):
-                _remove_external(policy_id)
-        if st.session_state.get("vs_insurance_review_policy_id") == policy_id:
-            st.divider()
-            _render_review_form(record)
+            st.caption(f"Status: {verification_label(record.get('verification_status'))}")
+            st.caption(str(record.get("display_status", "")))
+            reasons = record.get("review_reasons") or []
+            if reasons:
+                st.markdown("**Why this needs review**")
+                for reason in reasons:
+                    st.caption(f"• {reason}")
+            st.markdown(warning_box(OCR_REVIEW_NOTE), unsafe_allow_html=True)
+            with st.expander("Raw extracted values (session only)"):
+                st.json(record.get("raw_extracted") or {})
+                st.caption(
+                    "Kept only in this browser session for review. It is not written to "
+                    "logs, a cache or the repository."
+                )
+            action_col, remove_col = st.columns(2)
+            with action_col:
+                if st.button(
+                    "Review extracted details",
+                    key=f"vs_review_open_{policy_id}",
+                    type="primary",
+                    width="stretch",
+                ):
+                    st.session_state["vs_insurance_review_policy_id"] = policy_id
+                    st.rerun()
+            with remove_col:
+                if st.button(
+                    "Remove document / policy from this session",
+                    key=f"vs_remove_external_{policy_id}",
+                    width="stretch",
+                ):
+                    _remove_external(policy_id)
+            if st.session_state.get("vs_insurance_review_policy_id") == policy_id:
+                st.divider()
+                _render_review_form(record)
+        with document_tab:
+            _render_policy_document(record)
 
 
 def _process_upload(
@@ -775,8 +789,9 @@ def _process_upload(
         validated = validate_insurance_upload(uploaded.name, raw)
     except UploadValidationError as exc:
         st.error(str(exc))
-        st.info("No policy was added. Seeded demo policies remain available.")
+        st.info("No policy was added. Existing policies remain available.")
         return
+    raw_bytes = bytes(raw)
 
     status = st.status("Processing with Sarvam Document AI…", expanded=True)
     try:
@@ -793,7 +808,7 @@ def _process_upload(
         status.update(label="Sarvam extraction failed", state="error")
         st.error(str(exc))
         st.info(
-            "No policy was added. Seeded demo policies remain available; upload "
+            "No policy was added. Existing policies remain available; upload "
             "again after fixing the issue."
         )
         return
@@ -808,12 +823,19 @@ def _process_upload(
     )
     if not result.added or result.record is None:
         st.error(result.message)
-        st.info("No policy was added. Seeded demo policies remain available.")
+        st.info("No policy was added. Existing policies remain available.")
         return
 
     external = list(st.session_state.get("vs_insurance_external_policies", []))
     external.append(result.record)
     st.session_state["vs_insurance_external_policies"] = external
+    documents = dict(st.session_state.get("vs_insurance_documents", {}))
+    documents[str(result.record["policy_id"])] = {
+        "data": raw_bytes,
+        "mime_type": validated.mime_type,
+        "name": validated.filename,
+    }
+    st.session_state["vs_insurance_documents"] = documents
     st.session_state["vs_insurance_review_policy_id"] = result.record["policy_id"]
     st.session_state["vs_insurance_upload_nonce"] = (
         int(st.session_state.get("vs_insurance_upload_nonce", 0)) + 1
@@ -915,8 +937,8 @@ def _render_external(
     )
     if not external:
         st.info(
-            "No external policies in this session for this demo user. Upload a "
-            "document above, or use the seeded Bought on Paytm policies for the demo."
+            "No external policies in this session for this account. Upload a "
+            "document above, or use the Bought on Paytm policies."
         )
         return
     for record in external:
@@ -941,9 +963,9 @@ def _render_limited_summary(
         st.markdown(
             pill("Limited summary shared by owner", "vs-pill-shared")
             + " "
-            + pill("Demo link accepted", "vs-pill-paytm")
+            + pill("Link accepted", "vs-pill-paytm")
             + " "
-            + pill("DEMO SUMMARY", "vs-pill-demo"),
+            + pill("SHARED SUMMARY", "vs-pill-info"),
             unsafe_allow_html=True,
         )
         st.markdown(f"**{esc(display_value(summary.get('product_name')))}**")
@@ -966,7 +988,6 @@ def _render_limited_summary(
             "number are not shared. Insurer nomination not verified."
         )
 
-
 def _respond_to_link(
     link: Mapping[str, Any],
     *,
@@ -988,9 +1009,9 @@ def _respond_to_link(
     _set_notice(
         "success",
         (
-            "Demo link accepted. Only an owner-authorised limited summary is shown."
+            "Link accepted. Only an owner-authorised limited summary is shown."
             if accept
-            else "Demo invitation declined. The demo link was revoked."
+            else "Invitation declined. The sharing link was revoked."
         ),
     )
     st.rerun()
@@ -1015,14 +1036,14 @@ def _render_nominee_section(
     )
     invitations = nominee_invitations_for_user(links, str(owner["demo_user_id"]))
     if invitations:
-        st.markdown("#### Your demo nominee invitations")
+        st.markdown("#### Your nominee invitations")
         for link in invitations:
             policy = find_policy(records, str(link.get("policy_id", "")))
             owner_profile = demo_user_by_id(str(link.get("owner_demo_user_id", "")))
             owner_name = (
                 str(owner_profile.get("display_name"))
                 if owner_profile
-                else "Demo owner"
+                else "Owner"
             )
             acceptance = str(link.get("nominee_acceptance_status"))
             with st.container(border=True):
@@ -1033,7 +1054,7 @@ def _render_nominee_section(
                 st.markdown(
                     pill(nominee_status_label(link), "vs-pill-review")
                     + " "
-                    + pill("DEMO", "vs-pill-demo"),
+                    + pill("INVITATION", "vs-pill-paytm"),
                     unsafe_allow_html=True,
                 )
                 if acceptance == "PENDING":
@@ -1053,7 +1074,7 @@ def _render_nominee_section(
                     accept_col, decline_col = st.columns(2)
                     with accept_col:
                         if st.button(
-                            "Accept demo link",
+                            "Accept link",
                             key=f"vs_accept_link_{link.get('link_id')}",
                             type="primary",
                             width="stretch",
@@ -1061,7 +1082,7 @@ def _render_nominee_section(
                             _respond_to_link(link, nominee=owner, accept=True)
                     with decline_col:
                         if st.button(
-                            "Decline demo link",
+                            "Decline link",
                             key=f"vs_decline_link_{link.get('link_id')}",
                             width="stretch",
                         ):
@@ -1074,26 +1095,26 @@ def _render_nominee_section(
                         _render_limited_summary(summary, owner_name=owner_name)
                     else:
                         st.info(
-                            "Demo link accepted. The owner has not allowed a limited "
+                            "Link accepted. The owner has not allowed a limited "
                             "policy summary to be shared, so no policy details are "
                             "shown."
                         )
                     st.caption(
-                        "Insurer nomination not verified. This demo link does not "
+                        "Insurer nomination not verified. This sharing link does not "
                         "register or confirm a legal nominee."
                     )
             st.caption(str(link.get("note") or ""))
     else:
         st.info(
-            f"No pending or accepted demo nominee invitations for "
+            f"No pending or accepted nominee invitations for "
             f"{owner.get('display_name')}."
         )
 
     owned_links = owner_links_for_user(links, str(owner["demo_user_id"]))
     if owned_links:
-        st.markdown("#### Demo links you created")
+        st.markdown("#### Sharing links you created")
         st.caption(
-            "These are simulated Paytm-ID links inside this prototype. They are not "
+            "These are family-sharing links inside this prototype. They are not "
             "insurer nomination records."
         )
         for link in owned_links:
@@ -1112,15 +1133,19 @@ def _render_nominee_section(
                 st.markdown(
                     pill(nominee_status_label(link), "vs-pill-review")
                     + " "
-                    + pill("DEMO LINK", "vs-pill-demo"),
+                    + pill("SHARING LINK", "vs-pill-paytm"),
                     unsafe_allow_html=True,
                 )
                 _fact_grid(
                     [
-                        ("Nominee", nominee.get("display_name") if nominee else "Demo nominee"),
+                        ("Nominee", nominee.get("display_name") if nominee else "Nominee"),
                         (
-                            "Nominee demo Paytm ID",
-                            nominee.get("demo_user_id") if nominee else None,
+                            "Nominee account",
+                            (
+                                f"@{login_id_for_user(nominee.get('demo_user_id')) or 'account'}"
+                                if nominee
+                                else None
+                            ),
                         ),
                         ("Relationship", relationship_label(link.get("relationship"))),
                         (
@@ -1131,11 +1156,11 @@ def _render_nominee_section(
                 )
                 st.caption(
                     "Insurer nomination not verified. Revoking this link only changes "
-                    "the demo sharing state; it does not cancel any insurer nomination."
+                    "the sharing state; it does not cancel any insurer nomination."
                 )
                 if link.get("demo_link_status") == "ACTIVE":
                     if st.button(
-                        "Revoke demo sharing link",
+                        "Revoke sharing link",
                         key=f"vs_revoke_owned_{link.get('link_id')}",
                     ):
                         try:
@@ -1151,7 +1176,7 @@ def _render_nominee_section(
                             )
                             _set_notice(
                                 "success",
-                                "Demo sharing link revoked. The limited summary is no "
+                                "Sharing link revoked. The limited summary is no "
                                 "longer visible to the nominee.",
                             )
                             st.rerun()
@@ -1172,7 +1197,7 @@ def render_active_insurances(language: str = "en") -> None:
 
     st.markdown("## Active Insurances")
     st.caption(
-        "A Paytm-style demo inventory for policies bought on Paytm, external "
+        "A Paytm-style inventory for policies bought on Paytm, external "
         "documents processed with Sarvam Document AI, and explicitly shared "
         "nominee-linked summaries."
     )
@@ -1180,8 +1205,11 @@ def render_active_insurances(language: str = "en") -> None:
         f'<div class="vs-paytm-strip">{esc(PROTOTYPE_LABEL)}</div>',
         unsafe_allow_html=True,
     )
+    st.caption(
+        f"Showing policies linked to {owner.get('display_name')} "
+        f"(@{login_id_for_user(owner.get('demo_user_id')) or 'account'})."
+    )
     _render_notice()
-    _render_session_card(owner, users)
 
     st.write("")
     section = st.radio(
@@ -1202,18 +1230,9 @@ def render_active_insurances(language: str = "en") -> None:
 
     st.divider()
     st.caption(
-        "Demo boundary: Paytm data and nominee links are simulated. Sarvam OCR "
-        "output is fallible and unverified. No insurer confirmation, claim filing, "
-        "payment or legal nomination is implemented in this prototype."
-    )
-    st.button(
-        "Reset insurance demo",
-        key="vs_insurance_reset_demo",
-        on_click=_reset_demo_callback,
-        help=(
-            "Clears session-created external policies and nominee changes, then "
-            "restores the seeded demo fixtures."
-        ),
+        "Prototype boundary: Paytm-style data and family-sharing links are local "
+        "to this session. Sarvam OCR output is fallible and unverified. No insurer "
+        "confirmation, claim filing, payment or legal nomination is implemented."
     )
 
 

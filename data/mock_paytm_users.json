@@ -2,14 +2,14 @@
   "users": [
     {
       "demo_user_id": "paytm.demo.aarav",
-      "display_name": "Aarav Demo",
-      "initials": "AD",
+      "display_name": "Aarav Sharma",
+      "initials": "AS",
       "is_default": true
     },
     {
       "demo_user_id": "paytm.demo.meera",
-      "display_name": "Meera Demo",
-      "initials": "MD",
+      "display_name": "Meera Sharma",
+      "initials": "MS",
       "is_default": false
     }
   ]

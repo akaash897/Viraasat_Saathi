@@ -95,7 +95,7 @@ class MockPaytmPolicy(BaseModel):
     verification_status: Literal["SIMULATED_NOT_VERIFIED"] = (
         "SIMULATED_NOT_VERIFIED"
     )
-    display_status: str = "Demo record — not verified with insurer"
+    display_status: str = "Not verified with insurer"
 
     @field_validator("owner_demo_user_id")
     @classmethod
